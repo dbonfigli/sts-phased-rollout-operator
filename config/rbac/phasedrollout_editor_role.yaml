@@ -1,0 +1,31 @@
+# permissions for end users to edit phasedrollouts.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: phasedrollout-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: sts-plus-operator
+    app.kubernetes.io/part-of: sts-plus-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: phasedrollout-editor-role
+rules:
+- apiGroups:
+  - sts.plus
+  resources:
+  - phasedrollouts
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sts.plus
+  resources:
+  - phasedrollouts/status
+  verbs:
+  - get
