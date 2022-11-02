@@ -17,25 +17,27 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // PhasedRolloutSpec defines the desired state of PhasedRollout
 type PhasedRolloutSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of PhasedRollout. Edit phasedrollout_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// TargetRef references a target resource
+	TargetRef string `json:"targetRef"`
+	// Check defines the validation process of a rollout
+	Check Check `json:"check"`
+	// SkipCheck perform the rollout without performing checks
+	// +optional
+	SkipCheck bool `json:"skipCheck,omitempty"`
+	// Whether to rollback the rollout in case of failure of the checks
+	// +optional
+	Rollback bool `json:"rollback,omitempty"`
 }
 
 // PhasedRolloutStatus defines the observed state of PhasedRollout
 type PhasedRolloutStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 
 //+kubebuilder:object:root=true
@@ -61,4 +63,58 @@ type PhasedRolloutList struct {
 
 func init() {
 	SchemeBuilder.Register(&PhasedRollout{}, &PhasedRolloutList{})
+}
+
+// Check is used to describe how the check should be done
+type Check struct {
+	//+kubebuilder:validation:Minimum=30
+
+	// Number of seconds to wait before performing cheks after rollout step, after rolled pods are ready. Default is 60 seconds, minimum is 30.
+	// +optional
+	InitialDelaySeconds int `json:"initialDelaySeconds,omitempty"`
+
+	//+kubebuilder:validation:Minimum=30
+
+	// How often (in seconds) to perform the check. Default is 60 seconds, minimum is 30.
+	// +optional
+	PeriodSeconds int `json:"periodSeconds,omitempty"`
+
+	//+kubebuilder:validation:Minimum=1
+
+	// Max number of tries before the rollout step is marked as failed. Default is 10.
+	// +optional
+	MaxTries int `json:"maxTries,omitempty"`
+
+	//+kubebuilder:validation:Minimum=1
+
+	// Number of consecutive success checks to consider the rollout step good. Default is 3.
+	// +optional
+	SuccessThreshold int `json:"successThreshold,omitempty"`
+
+	//+kubebuilder:validation:Minimum=1
+
+	// Number of consecutive failed checks to consider the rollout step failed. Default is 3.
+	// +optional
+	FailureThreshold int `json:"failureThreshold,omitempty"`
+
+	// Details on the prmetheus query to perform as check
+	Query PrometheusQuery `json:"query"`
+}
+
+// PrometheusQuery describes how to perform the prometheus query
+type PrometheusQuery struct {
+
+	//+kubebuilder:validation:MinLength=1
+
+	// Prometheus expression for the check
+	Expr string `json:"expr"`
+
+	//+kubebuilder:validation:MinLength=1
+
+	// URL of prometheus endpoint
+	URL string `json:"url"`
+
+	// Secret reference containing the prometheus credentials
+	// +optional
+	SecretRef *corev1.LocalObjectReference `json:"secretRef,omitempty"`
 }
