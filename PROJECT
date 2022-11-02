@@ -1,0 +1,9 @@
+domain: sts.plus
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: sts-plus-operator
+repo: github.com/dbonfigli/sts-plus-operator
+version: "3"
