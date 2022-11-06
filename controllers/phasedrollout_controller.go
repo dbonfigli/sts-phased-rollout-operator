@@ -37,6 +37,8 @@ type PhasedRolloutReconciler struct {
 //+kubebuilder:rbac:groups=sts.plus,resources=phasedrollouts,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=sts.plus,resources=phasedrollouts/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=sts.plus,resources=phasedrollouts/finalizers,verbs=update
+//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;patch
+//+kubebuilder:rbac:groups=apps,resources=statefulsets/status,verbs=get
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
