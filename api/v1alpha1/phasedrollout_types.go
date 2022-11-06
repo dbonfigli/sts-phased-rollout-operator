@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -29,10 +28,10 @@ type PhasedRolloutSpec struct {
 	Check Check `json:"check"`
 	// SkipCheck perform the rollout without performing checks
 	// +optional
-	SkipCheck bool `json:"skipCheck,omitempty"`
+	SkipCheck bool `json:"skipCheck"`
 	// Whether to rollback the rollout in case of failure of the checks
 	// +optional
-	Rollback bool `json:"rollback,omitempty"`
+	Rollback bool `json:"rollback"`
 }
 
 // PhasedRolloutStatus defines the observed state of PhasedRollout
@@ -71,31 +70,31 @@ type Check struct {
 
 	// Number of seconds to wait before performing cheks after rollout step, after rolled pods are ready. Default is 60 seconds, minimum is 30.
 	// +optional
-	InitialDelaySeconds int `json:"initialDelaySeconds,omitempty"`
+	InitialDelaySeconds int `json:"initialDelaySeconds"`
 
 	//+kubebuilder:validation:Minimum=30
 
 	// How often (in seconds) to perform the check. Default is 60 seconds, minimum is 30.
 	// +optional
-	PeriodSeconds int `json:"periodSeconds,omitempty"`
+	PeriodSeconds int `json:"periodSeconds"`
 
 	//+kubebuilder:validation:Minimum=1
 
 	// Max number of tries before the rollout step is marked as failed. Default is 10.
 	// +optional
-	MaxTries int `json:"maxTries,omitempty"`
+	MaxTries int `json:"maxTries"`
 
 	//+kubebuilder:validation:Minimum=1
 
 	// Number of consecutive success checks to consider the rollout step good. Default is 3.
 	// +optional
-	SuccessThreshold int `json:"successThreshold,omitempty"`
+	SuccessThreshold int `json:"successThreshold"`
 
 	//+kubebuilder:validation:Minimum=1
 
 	// Number of consecutive failed checks to consider the rollout step failed. Default is 3.
 	// +optional
-	FailureThreshold int `json:"failureThreshold,omitempty"`
+	FailureThreshold int `json:"failureThreshold"`
 
 	// Details on the prmetheus query to perform as check
 	Query PrometheusQuery `json:"query"`
@@ -116,5 +115,5 @@ type PrometheusQuery struct {
 
 	// Secret reference containing the prometheus credentials
 	// +optional
-	SecretRef *corev1.LocalObjectReference `json:"secretRef,omitempty"`
+	SecretRef string `json:"secretRef,omitempty"`
 }
