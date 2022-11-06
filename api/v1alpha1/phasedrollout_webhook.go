@@ -97,6 +97,9 @@ func (r *PhasedRollout) validatePhasedRollout() error {
 	if err := r.validatePrometheusUrl(); err != nil {
 		allErrs = append(allErrs, err)
 	}
+	if len(allErrs) == 0 {
+		return nil
+	}
 	return apierrors.NewInvalid(
 		schema.GroupKind{Group: "sts.plus", Kind: "PhasedRollout"},
 		r.Name, allErrs)
