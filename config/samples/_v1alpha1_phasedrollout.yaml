@@ -9,4 +9,16 @@ metadata:
     app.kubernetes.io/created-by: sts-plus-operator
   name: phasedrollout-sample
 spec:
-  # TODO(user): Add fields here
+  targetRef: web
+  skipCheck: false
+  rollback: false
+  check:
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    maxTries: 10
+    successThreshold: 3
+    failureThreshold: 3
+    query:
+      expr: "up{}"
+      url: prom:9000/xx
+      secretRef: promSecret

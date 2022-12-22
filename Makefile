@@ -113,7 +113,9 @@ build: generate fmt vet ## Build manager binary.
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go
+#	go run ./main.go
+	mkdir -p /tmp/k8s-webhook-server/serving-certs && cp cert~/* /tmp/k8s-webhook-server/serving-certs
+	go run ./main.go -zap-log-level=10
 
 # If you wish built the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64 ). However, you must enable docker buildKit for it.
