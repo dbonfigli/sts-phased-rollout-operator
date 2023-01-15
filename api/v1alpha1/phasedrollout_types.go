@@ -20,23 +20,44 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	PhasedRollotErrorCannotManage = "errorCannotManage"
+	PhasedRollotErrorSTSNotFound  = "errorSTSNotFound"
+	PhasedRollotRolling           = "rolling"
+	PhasedRollotUpdated           = "updated"
+	PhasedRollotSuspened          = "suspended"
+)
+
 // PhasedRolloutSpec defines the desired state of PhasedRollout
 type PhasedRolloutSpec struct {
 	// TargetRef references a target resource
 	TargetRef string `json:"targetRef"`
 	// Check defines the validation process of a rollout
 	Check Check `json:"check"`
-	// SkipCheck perform the rollout without performing checks
+	// StandardRollingUpdate stop the phased rollout mechanism and resume the standard RollingUpdate strategy
 	// +optional
-	SkipCheck bool `json:"skipCheck"`
-	// Whether to rollback the rollout in case of failure of the checks
-	// +optional
-	Rollback bool `json:"rollback"`
+	StandardRollingUpdate bool `json:"standardRollingUpdate"`
 }
 
 // PhasedRolloutStatus defines the observed state of PhasedRollout
 type PhasedRolloutStatus struct {
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	Status           string            `json:"status,omitempty"` // error / rolling / updated
+	Message          string            `json:"message,omitempty"`
+	CurrentRevision  string            `json:"currentRevision,omitempty"`
+	UpdateRevision   string            `json:"updateRevision,omitempty"`
+	RolloutStartTime string            `json:"rolloutStartTime,omitempty"`
+	RolloutEndTime   string            `json:"rolloutEndTime,omitempty"`
+	RollingPodStatus *RollingPodStatus `json:"rollingPodStatus,omitempty"`
+}
+
+type RollingPodStatus struct {
+	Status                      string `json:"status,omitempty"` // waitToBeRolled / waitToBeReady / initialDelay / rolling
+	Name                        string `json:"name,omitempty"`
+	RolloutStartTime            string `json:"rolloutStartTime,omitempty"`
+	LastCheckTime               string `json:"lastCheckTime,omitempty"`
+	ConsecutiveSuccessfulChecks string `json:"consecutiveSuccessfulChecks,omitempty"`
+	ConsecutiveFailedChecks     string `json:"consecutiveFailedChecks,omitempty"`
+	TotalFailedChecks           string `json:"totalFailedChecks,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -68,7 +89,7 @@ func init() {
 type Check struct {
 	//+kubebuilder:validation:Minimum=30
 
-	// Number of seconds to wait before performing cheks after rollout step, after rolled pods are ready. Default is 60 seconds, minimum is 30.
+	// Number of seconds to wait before performing cheks after rollout step, after rolled pods are ready. This is usefult to set to wait for metrics to settle down. Default is 60 seconds, minimum is 30.
 	// +optional
 	InitialDelaySeconds int `json:"initialDelaySeconds"`
 
@@ -80,21 +101,9 @@ type Check struct {
 
 	//+kubebuilder:validation:Minimum=1
 
-	// Max number of tries before the rollout step is marked as failed. Default is 10.
-	// +optional
-	MaxTries int `json:"maxTries"`
-
-	//+kubebuilder:validation:Minimum=1
-
 	// Number of consecutive success checks to consider the rollout step good. Default is 3.
 	// +optional
 	SuccessThreshold int `json:"successThreshold"`
-
-	//+kubebuilder:validation:Minimum=1
-
-	// Number of consecutive failed checks to consider the rollout step failed. Default is 3.
-	// +optional
-	FailureThreshold int `json:"failureThreshold"`
 
 	// Details on the prmetheus query to perform as check
 	Query PrometheusQuery `json:"query"`

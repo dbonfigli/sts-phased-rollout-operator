@@ -52,14 +52,8 @@ func (r *PhasedRollout) Default() {
 	if r.Spec.Check.PeriodSeconds == 0 {
 		r.Spec.Check.PeriodSeconds = 60
 	}
-	if r.Spec.Check.MaxTries == 0 {
-		r.Spec.Check.MaxTries = 10
-	}
 	if r.Spec.Check.SuccessThreshold == 0 {
 		r.Spec.Check.SuccessThreshold = 3
-	}
-	if r.Spec.Check.FailureThreshold == 0 {
-		r.Spec.Check.FailureThreshold = 3
 	}
 }
 

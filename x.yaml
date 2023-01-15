@@ -27,6 +27,5 @@ spec:
       secretRef: promSecret
       url: prom:9000/xx
     successThreshold: 3
-  rollback: false
   skipCheck: false
   targetRef: web
