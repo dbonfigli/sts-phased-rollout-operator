@@ -14,15 +14,15 @@ import (
 )
 
 type PrometheusClient struct {
-	timeout       time.Duration
-	url           url.URL
-	username      string
-	password      string
-	customHeaders map[string]string
-	client        *http.Client
+	timeout  time.Duration
+	url      url.URL
+	username string
+	password string
+	token    string
+	client   *http.Client
 }
 
-func NewPrometheusClient(endpoint string, insecureSkipVerify bool, username, password string, customHeaders map[string]string) (*PrometheusClient, error) {
+func NewPrometheusClient(endpoint string, insecureSkipVerify bool, username, password, token string) (*PrometheusClient, error) {
 	promURL, err := url.Parse(endpoint)
 	if endpoint == "" || err != nil {
 		return nil, fmt.Errorf("address %s is not a valid URL", endpoint)
@@ -42,7 +42,7 @@ func NewPrometheusClient(endpoint string, insecureSkipVerify bool, username, pas
 
 	prom.username = username
 	prom.password = password
-	prom.customHeaders = customHeaders
+	prom.token = token
 
 	return &prom, nil
 }
@@ -78,8 +78,12 @@ func (p *PrometheusClient) RunQuery(query string) (bool, error) {
 		req.SetBasicAuth(p.username, p.password)
 	}
 
-	for k, v := range p.customHeaders {
-		req.Header.Set(k, v)
+	if p.token != "" {
+		req.Header.Add("Authorization", "Bearer "+p.token)
+	}
+
+	if p.username != "" && p.password != "" {
+		req.SetBasicAuth(p.username, p.password)
 	}
 
 	ctx, cancel := context.WithTimeout(req.Context(), p.timeout)
