@@ -64,12 +64,10 @@ spec:
                         type: boolean
                       secretRef:
                         description: 'Secret reference containing the prometheus credentials
-                          for basic authentication and/or custom headers. The data
-                          in the secret can optionally have: username: username to
-                          use for basic authentication password: password to use for
-                          basic authentication customHeaders: multiline string of
-                          the format "headerName: headerValue" with the headers to
-                          pass'
+                          for basic authentication or bearer token authentication.
+                          The data in the secret can optionally have: username: username
+                          to use for basic authentication password: password to use
+                          for basic authentication token: token for bearer token authentication'
                         type: string
                       url:
                         description: URL of prometheus endpoint

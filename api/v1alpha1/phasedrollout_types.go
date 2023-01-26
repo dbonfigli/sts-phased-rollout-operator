@@ -131,11 +131,11 @@ type PrometheusQuery struct {
 	// +optional
 	InsecureSkipVerify bool `json:"insecureSkipVerify"`
 
-	// Secret reference containing the prometheus credentials for basic authentication and/or custom headers.
+	// Secret reference containing the prometheus credentials for basic authentication or bearer token authentication.
 	// The data in the secret can optionally have:
 	// username: username to use for basic authentication
 	// password: password to use for basic authentication
-	// customHeaders: multiline string of the format "headerName: headerValue" with the headers to pass
+	// token: token for bearer token authentication
 	// +optional
 	SecretRef string `json:"secretRef,omitempty"`
 }

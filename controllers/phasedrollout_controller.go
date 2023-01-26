@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"strconv"
-	"strings"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -375,7 +374,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 		// prepare prometheus client
 		username := ""
 		password := ""
-		customHeaders := make(map[string]string)
+		token := ""
 		secretRef := phasedRollout.Spec.Check.Query.SecretRef
 		if secretRef != "" {
 			// get secret for prometheus credentials
@@ -398,20 +397,10 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			passwordByte := secret.Data["password"]
 			password = string(passwordByte)
 
-			customHeadersByte := secret.Data["customHeaders"]
-			customHeadersString := string(customHeadersByte)
-			for _, headerPair := range strings.SplitN(customHeadersString, "\n", 2) {
-				header := strings.Split(headerPair, ": ")
-				if len(header) != 2 {
-					log.Info("error on customHeaders field, it does not seem of the format \"headerName: headerValue\" will retry in 30 seconds", "secret", secretRef, "header", header)
-					return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
-				}
-				k := strings.TrimSpace(header[0])
-				v := strings.TrimSpace(header[1])
-				customHeaders[k] = v
-			}
+			tokenByte := secret.Data["token"]
+			token = string(tokenByte)
 		}
-		promClient, err := prometheus.NewPrometheusClient(phasedRollout.Spec.Check.Query.URL, phasedRollout.Spec.Check.Query.InsecureSkipVerify, username, password, customHeaders)
+		promClient, err := prometheus.NewPrometheusClient(phasedRollout.Spec.Check.Query.URL, phasedRollout.Spec.Check.Query.InsecureSkipVerify, username, password, token)
 		if err != nil {
 			log.Error(err, "error setting up prometheus client")
 			phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.PrometheusError
