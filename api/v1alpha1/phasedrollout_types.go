@@ -26,6 +26,12 @@ const (
 	PhasedRollotRolling           = "rolling"
 	PhasedRollotUpdated           = "updated"
 	PhasedRollotSuspened          = "suspended"
+
+	RollingPodWaitForPodToBeUpdated = "waitForPodToBeUpdated"
+	RollingPodWaitForPodToBeReady   = "waitForPodToBeReady"
+	RollingPodWaitForInitialDelay   = "waitForInitialDelay"
+	RollingPodWaitForChecks         = "waitForChecks"
+	PrometheusError                 = "prometheusError"
 )
 
 // PhasedRolloutSpec defines the desired state of PhasedRollout
@@ -43,7 +49,6 @@ type PhasedRolloutSpec struct {
 type PhasedRolloutStatus struct {
 	Status           string            `json:"status,omitempty"` // error / rolling / updated
 	Message          string            `json:"message,omitempty"`
-	CurrentRevision  string            `json:"currentRevision,omitempty"`
 	UpdateRevision   string            `json:"updateRevision,omitempty"`
 	RolloutStartTime string            `json:"rolloutStartTime,omitempty"`
 	RolloutEndTime   string            `json:"rolloutEndTime,omitempty"`
@@ -52,12 +57,12 @@ type PhasedRolloutStatus struct {
 
 type RollingPodStatus struct {
 	Status                      string `json:"status,omitempty"` // waitToBeRolled / waitToBeReady / initialDelay / rolling
-	Name                        string `json:"name,omitempty"`
-	RolloutStartTime            string `json:"rolloutStartTime,omitempty"`
+	Partition                   int32  `json:"partition"`
+	AnalisysStartTime           string `json:"analisysStartTime,omitempty"`
 	LastCheckTime               string `json:"lastCheckTime,omitempty"`
-	ConsecutiveSuccessfulChecks string `json:"consecutiveSuccessfulChecks,omitempty"`
-	ConsecutiveFailedChecks     string `json:"consecutiveFailedChecks,omitempty"`
-	TotalFailedChecks           string `json:"totalFailedChecks,omitempty"`
+	ConsecutiveSuccessfulChecks int32  `json:"consecutiveSuccessfulChecks"`
+	ConsecutiveFailedChecks     int32  `json:"consecutiveFailedChecks"`
+	TotalFailedChecks           int32  `json:"totalFailedChecks"`
 }
 
 //+kubebuilder:object:root=true
@@ -87,23 +92,23 @@ func init() {
 
 // Check is used to describe how the check should be done
 type Check struct {
-	//+kubebuilder:validation:Minimum=30
+	//+kubebuilder:validation:Minimum=10
 
-	// Number of seconds to wait before performing cheks after rollout step, after rolled pods are ready. This is usefult to set to wait for metrics to settle down. Default is 60 seconds, minimum is 30.
+	// Number of seconds to wait before performing cheks after rollout step, after rolled pods are ready. This is usefult to set to wait for metrics to settle down. Default is 60 seconds, minimum is 10.
 	// +optional
-	InitialDelaySeconds int `json:"initialDelaySeconds"`
+	InitialDelaySeconds int32 `json:"initialDelaySeconds"`
 
-	//+kubebuilder:validation:Minimum=30
+	//+kubebuilder:validation:Minimum=10
 
-	// How often (in seconds) to perform the check. Default is 60 seconds, minimum is 30.
+	// How often (in seconds) to perform the check. Default is 60 seconds, minimum is 10.
 	// +optional
-	PeriodSeconds int `json:"periodSeconds"`
+	PeriodSeconds int32 `json:"periodSeconds"`
 
 	//+kubebuilder:validation:Minimum=1
 
 	// Number of consecutive success checks to consider the rollout step good. Default is 3.
 	// +optional
-	SuccessThreshold int `json:"successThreshold"`
+	SuccessThreshold int32 `json:"successThreshold"`
 
 	// Details on the prmetheus query to perform as check
 	Query PrometheusQuery `json:"query"`
@@ -122,7 +127,15 @@ type PrometheusQuery struct {
 	// URL of prometheus endpoint
 	URL string `json:"url"`
 
-	// Secret reference containing the prometheus credentials
+	// true will skip tls checks
+	// +optional
+	InsecureSkipVerify bool `json:"insecureSkipVerify"`
+
+	// Secret reference containing the prometheus credentials for basic authentication and/or custom headers.
+	// The data in the secret can optionally have:
+	// username: username to use for basic authentication
+	// password: password to use for basic authentication
+	// customHeaders: multiline string of the format "headerName: headerValue" with the headers to pass
 	// +optional
 	SecretRef string `json:"secretRef,omitempty"`
 }

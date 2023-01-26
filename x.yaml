@@ -24,7 +24,7 @@ spec:
     periodSeconds: 30
     query:
       expr: up{}
-      secretRef: promSecret
+      secretRef: prom-secret
       url: prom:9000/xx
     successThreshold: 3
   skipCheck: false

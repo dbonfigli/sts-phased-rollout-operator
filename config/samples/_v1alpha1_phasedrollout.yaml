@@ -20,4 +20,4 @@ spec:
     query:
       expr: "up{}"
       url: prom:9000/xx
-      secretRef: promSecret
+      secretRef: prom-secret

@@ -42,13 +42,15 @@ spec:
                     description: Number of seconds to wait before performing cheks
                       after rollout step, after rolled pods are ready. This is usefult
                       to set to wait for metrics to settle down. Default is 60 seconds,
-                      minimum is 30.
-                    minimum: 30
+                      minimum is 10.
+                    format: int32
+                    minimum: 10
                     type: integer
                   periodSeconds:
                     description: How often (in seconds) to perform the check. Default
-                      is 60 seconds, minimum is 30.
-                    minimum: 30
+                      is 60 seconds, minimum is 10.
+                    format: int32
+                    minimum: 10
                     type: integer
                   query:
                     description: Details on the prmetheus query to perform as check
@@ -57,8 +59,17 @@ spec:
                         description: Prometheus expression for the check
                         minLength: 1
                         type: string
+                      insecureSkipVerify:
+                        description: true will skip tls checks
+                        type: boolean
                       secretRef:
-                        description: Secret reference containing the prometheus credentials
+                        description: 'Secret reference containing the prometheus credentials
+                          for basic authentication and/or custom headers. The data
+                          in the secret can optionally have: username: username to
+                          use for basic authentication password: password to use for
+                          basic authentication customHeaders: multiline string of
+                          the format "headerName: headerValue" with the headers to
+                          pass'
                         type: string
                       url:
                         description: URL of prometheus endpoint
@@ -71,6 +82,7 @@ spec:
                   successThreshold:
                     description: Number of consecutive success checks to consider
                       the rollout step good. Default is 3.
+                    format: int32
                     minimum: 1
                     type: integer
                 required:
@@ -90,26 +102,33 @@ spec:
           status:
             description: PhasedRolloutStatus defines the observed state of PhasedRollout
             properties:
-              currentRevision:
-                type: string
               message:
                 type: string
               rollingPodStatus:
                 properties:
+                  analisysStartTime:
+                    type: string
                   consecutiveFailedChecks:
-                    type: string
+                    format: int32
+                    type: integer
                   consecutiveSuccessfulChecks:
-                    type: string
+                    format: int32
+                    type: integer
                   lastCheckTime:
                     type: string
-                  name:
-                    type: string
-                  rolloutStartTime:
-                    type: string
+                  partition:
+                    format: int32
+                    type: integer
                   status:
                     type: string
                   totalFailedChecks:
-                    type: string
+                    format: int32
+                    type: integer
+                required:
+                - consecutiveFailedChecks
+                - consecutiveSuccessfulChecks
+                - partition
+                - totalFailedChecks
                 type: object
               rolloutEndTime:
                 type: string
