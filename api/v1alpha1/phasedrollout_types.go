@@ -110,7 +110,7 @@ type Check struct {
 	// +optional
 	SuccessThreshold int32 `json:"successThreshold"`
 
-	// Details on the prmetheus query to perform as check
+	// Details on the prmetheus query to perform as check, semantic similar to a prometheus alert: no data means success, if the query returns data it means failure
 	Query PrometheusQuery `json:"query"`
 }
 
