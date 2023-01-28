@@ -27,20 +27,20 @@ const (
 	PhasedRollotUpdated           = "updated"
 	PhasedRollotSuspened          = "suspended"
 
-	RollingPodWaitForPodToBeUpdated = "waitForPodToBeUpdated"
-	RollingPodWaitForPodToBeReady   = "waitForPodToBeReady"
-	RollingPodWaitForInitialDelay   = "waitForInitialDelay"
-	RollingPodWaitForChecks         = "waitForChecks"
-	PrometheusError                 = "prometheusError"
+	RollingPodWaitForPodToBeUpdated       = "waitForPodToBeUpdated"
+	RollingPodWaitForAllPodsToBeAvailable = "WaitForAllPodsToBeAvailable"
+	RollingPodWaitForInitialDelay         = "waitForInitialDelay"
+	RollingPodWaitForChecks               = "waitForChecks"
+	RollingPodPrometheusError             = "prometheusError"
 )
 
 // PhasedRolloutSpec defines the desired state of PhasedRollout
 type PhasedRolloutSpec struct {
-	// TargetRef references a target resource
+	// TargetRef references a target resource, i.e. the name of the statefulset this PhasedRollout should manage
 	TargetRef string `json:"targetRef"`
 	// Check defines the validation process of a rollout
 	Check Check `json:"check"`
-	// StandardRollingUpdate stop the phased rollout mechanism and resume the standard RollingUpdate strategy
+	// StandardRollingUpdate stops the phased rollout mechanism and resume the standard RollingUpdate strategy
 	// +optional
 	StandardRollingUpdate bool `json:"standardRollingUpdate"`
 }
@@ -92,21 +92,21 @@ func init() {
 
 // Check is used to describe how the check should be done
 type Check struct {
-	//+kubebuilder:validation:Minimum=10
+	//+kubebuilder:validation:Minimum=0
 
-	// Number of seconds to wait before performing cheks after rollout step, after rolled pods are ready. This is usefult to set to wait for metrics to settle down. Default is 60 seconds, minimum is 10.
+	// Number of seconds to wait before performing cheks after rollout step, after rolled pods are available. This is usefult to set to wait for metrics to settle down. Default is 60 seconds, minimum is 0.
 	// +optional
 	InitialDelaySeconds int32 `json:"initialDelaySeconds"`
 
-	//+kubebuilder:validation:Minimum=10
+	//+kubebuilder:validation:Minimum=0
 
-	// How often (in seconds) to perform the check. Default is 60 seconds, minimum is 10.
+	// How often (in seconds) to perform the check. Default is 60 seconds, minimum is 0.
 	// +optional
 	PeriodSeconds int32 `json:"periodSeconds"`
 
 	//+kubebuilder:validation:Minimum=1
 
-	// Number of consecutive success checks to consider the rollout step good. Default is 3.
+	// Number of consecutive success checks to consider the rollout step good. Default is 3, minimum is 1.
 	// +optional
 	SuccessThreshold int32 `json:"successThreshold"`
 

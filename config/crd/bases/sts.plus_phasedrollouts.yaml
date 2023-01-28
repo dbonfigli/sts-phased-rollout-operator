@@ -40,17 +40,17 @@ spec:
                 properties:
                   initialDelaySeconds:
                     description: Number of seconds to wait before performing cheks
-                      after rollout step, after rolled pods are ready. This is usefult
-                      to set to wait for metrics to settle down. Default is 60 seconds,
-                      minimum is 10.
+                      after rollout step, after rolled pods are available. This is
+                      usefult to set to wait for metrics to settle down. Default is
+                      60 seconds, minimum is 0.
                     format: int32
-                    minimum: 10
+                    minimum: 0
                     type: integer
                   periodSeconds:
                     description: How often (in seconds) to perform the check. Default
-                      is 60 seconds, minimum is 10.
+                      is 60 seconds, minimum is 0.
                     format: int32
-                    minimum: 10
+                    minimum: 0
                     type: integer
                   query:
                     description: Details on the prmetheus query to perform as check
@@ -79,7 +79,7 @@ spec:
                     type: object
                   successThreshold:
                     description: Number of consecutive success checks to consider
-                      the rollout step good. Default is 3.
+                      the rollout step good. Default is 3, minimum is 1.
                     format: int32
                     minimum: 1
                     type: integer
@@ -87,11 +87,12 @@ spec:
                 - query
                 type: object
               standardRollingUpdate:
-                description: StandardRollingUpdate stop the phased rollout mechanism
+                description: StandardRollingUpdate stops the phased rollout mechanism
                   and resume the standard RollingUpdate strategy
                 type: boolean
               targetRef:
-                description: TargetRef references a target resource
+                description: TargetRef references a target resource, i.e. the name
+                  of the statefulset this PhasedRollout should manage
                 type: string
             required:
             - check
