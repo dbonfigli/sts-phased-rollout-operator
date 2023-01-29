@@ -323,7 +323,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			log.V(10).Info("pod is not updated to sts UpdateRevision, will retry after a backoff", "pod", podName)
 			return ctrl.Result{RequeueAfter: time.Duration(r.RetryWaitSeconds) * time.Second}, nil
 		}
-		log.Info("pod is updated to UpdateRevision, setting RollingPodStatus for next step", "pod", podName, "rollingPodStatus", stsplusv1alpha1.RollingPodWaitForAllPodsToBeAvailable)
+		log.Info("pod is updated to sts UpdateRevision, setting RollingPodStatus for next step", "pod", podName, "rollingPodStatus", stsplusv1alpha1.RollingPodWaitForAllPodsToBeAvailable)
 		phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodWaitForAllPodsToBeAvailable
 		phasedRollout.Status.RollingPodStatus.AnalisysStartTime = ""
 		phasedRollout.Status.RollingPodStatus.LastCheckTime = ""
