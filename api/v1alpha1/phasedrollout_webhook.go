@@ -44,7 +44,7 @@ var _ webhook.Defaulter = &PhasedRollout{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *PhasedRollout) Default() {
-	phasedrolloutlog.Info("default", "name", r.Name)
+	phasedrolloutlog.V(10).Info("default", "name", r.Name)
 
 	if r.Spec.Check.InitialDelaySeconds == 0 {
 		r.Spec.Check.InitialDelaySeconds = 60
@@ -63,21 +63,21 @@ var _ webhook.Validator = &PhasedRollout{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *PhasedRollout) ValidateCreate() error {
-	phasedrolloutlog.Info("validate create", "name", r.Name)
+	phasedrolloutlog.V(10).Info("validate create", "name", r.Name)
 
 	return r.validatePhasedRollout()
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *PhasedRollout) ValidateUpdate(old runtime.Object) error {
-	phasedrolloutlog.Info("validate update", "name", r.Name)
+	phasedrolloutlog.V(10).Info("validate update", "name", r.Name)
 
 	return r.validatePhasedRollout()
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *PhasedRollout) ValidateDelete() error {
-	phasedrolloutlog.Info("validate delete", "name", r.Name)
+	phasedrolloutlog.V(10).Info("validate delete", "name", r.Name)
 
 	return nil
 }
