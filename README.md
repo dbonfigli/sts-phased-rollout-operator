@@ -20,7 +20,7 @@ A statefulset can be managed only if the `updateStrategy` is of type `RollingUpd
 ### Inner Workings
 
 The rollout is controlled using the `statefulset.spec.updateStrategy.rollingUpdate.partition` field. When there is no need for a rolling update, the partition value is set to the number of replicas of the statefulset, to prevent uncontrolled rollouts. When the statefulset revision is updated and there is a need to perform a rolling update, for each pod to roll the phased rollout procedure will:
-* ensure previously rolled pod has been updated to the last revision of the statefulset;
+* ensure the previously rolled pod has been updated to the last revision of the statefulset;
 * ensure all pods in the statefulset are available;
 * wait a certain time to allow prometheus to gather fresh data;
 * perform prometheus checks, at intervals: after a number of consecutive succesful checks, the rollout is considered safe to continue;
@@ -30,7 +30,9 @@ Even if `statefulset.spec.updateStrategy.rollingUpdate.maxUnavailable` is respec
 
 Prometheus checks semantic is similar to prometheus alerts: if data is returned then the check is considered failed, if no data is returned the check is considered successful.
 
-### Example
+### Resource Example
+
+This is an example of `PHasedRollout` resource:
 
 ```yaml
 apiVersion: sts.plus/v1alpha1
@@ -38,8 +40,8 @@ kind: PhasedRollout
 metadata:
   name: phasedrollout-sample
 spec:
-  targetRef: web   # the name of the statefulset to manage
-  skipCheck: false # if true, the normal rolling update will be resumed
+  targetRef: web               # the name of the statefulset to manage
+  standardRollingUpdate: false # if true, the normal rolling update will be resumed
   check:
     initialDelaySeconds: 30 # initial delay to wait after a pod is rolled, to permit prometheus to get fresh data
     periodSeconds: 30       # interval between checks
@@ -62,6 +64,47 @@ type: Opaque
 ```
 
 See the complete [Custom Resource Definition](./config/crd/bases/sts.plus_phasedrollouts.yaml).
+
+### Step by Step example
+
+Here we describe a step by step example to test the operator.
+
+1. Install cert-manager:
+```sh
+helm repo add jetstack https://charts.jetstack.io
+helm install \
+  cert-manager jetstack/cert-manager \
+  --namespace cert-manager \
+  --create-namespace \
+  --version v1.11.0 \
+  --set installCRDs=true
+```
+
+2. Install Prometheus Operator with Helm v3:
+```sh
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+
+kubectl create ns monitoring
+helm upgrade -i prometheus prometheus-community/kube-prometheus-stack \
+--namespace monitoring \
+--set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false \
+--set fullnameOverride=prometheus
+```
+
+3. Install the CRDs into the cluster:
+```sh
+make install
+```
+
+3. Deploy the controller to the cluster:
+```sh
+make deploy IMG=dbonfigli/sts-plus-operator:latest
+```
+
+4. Deploy the samples:
+```sh
+kubectl apply -k config/samples/
+```
 
 ## Development
 

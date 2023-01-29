@@ -53,7 +53,9 @@ spec:
                     minimum: 0
                     type: integer
                   query:
-                    description: Details on the prmetheus query to perform as check
+                    description: 'Details on the prmetheus query to perform as check,
+                      semantic similar to a prometheus alert: no data means success,
+                      if the query returns data it means failure'
                     properties:
                       expr:
                         description: Prometheus expression for the check

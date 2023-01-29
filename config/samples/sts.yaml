@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: web
+  namespace: sample
 spec:
   serviceName: "nginx"
   replicas: 3
@@ -19,4 +20,3 @@ spec:
         ports:
         - containerPort: 80
           name: web
-

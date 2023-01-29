@@ -6,7 +6,7 @@ You’ll need a Kubernetes cluster to run against. You can use [KIND](https://si
 1. Install Instances of Custom Resources:
 
 ```sh
-kubectl apply -f config/samples/
+kubectl apply -k config/samples/
 ```
 
 2. Build and push your image to the location specified by `IMG`:
@@ -51,6 +51,11 @@ make install
 2. Run your controller (this will run in the foreground, so switch to a new terminal if you want to leave it running):
 
 ```sh
+# disable webhooks, otherwise you will need valid certs at:
+# /k8s-webhook-server/serving-certs/ca.crt
+# /k8s-webhook-server/serving-certs/tls.crt
+# /k8s-webhook-server/serving-certs/tls.key
+export ENABLE_WEBHOOKS=false
 make run
 ```
 

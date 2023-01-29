@@ -8,13 +8,14 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: sts-plus-operator
   name: phasedrollout-sample
+  namespace: sample
 spec:
   targetRef: web
-  skipCheck: false
+  standardRollingUpdate: false
   check:
     initialDelaySeconds: 30
     periodSeconds: 30
     successThreshold: 3
     query:
       expr: "up{}"
-      url: prometheus-operated.default.svc.cluster.local:9090/
+      url: http://prometheus-prometheus.monitoring:9090

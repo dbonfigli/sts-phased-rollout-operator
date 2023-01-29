@@ -113,8 +113,10 @@ build: generate fmt vet ## Build manager binary.
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
-#	go run ./main.go
-	mkdir -p /tmp/k8s-webhook-server/serving-certs && cp cert~/* /tmp/k8s-webhook-server/serving-certs
+	go run ./main.go
+
+.PHONY: run-debug
+run-debug: manifests generate fmt vet ## Run a controller from your host with debug level.
 	go run ./main.go -zap-log-level=10
 
 # If you wish built the manager image targeting other platforms you can use the --platform flag.
