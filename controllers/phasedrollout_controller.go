@@ -29,6 +29,7 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -40,6 +41,7 @@ import (
 )
 
 const managedByAnnotation = "sts.plus/phasedRollout"
+const finalizerAnnotation = "sts.plus/finalizer"
 
 // PhasedRolloutReconciler reconciles a PhasedRollout object.
 type PhasedRolloutReconciler struct {
@@ -74,6 +76,13 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
+	// add finalizer if the phasedRollout has not been marked for deletion
+	if phasedRollout.ObjectMeta.DeletionTimestamp.IsZero() && !controllerutil.ContainsFinalizer(&phasedRollout, finalizerAnnotation) {
+		log.V(10).Info("adding finalizer")
+		controllerutil.AddFinalizer(&phasedRollout, finalizerAnnotation)
+		return ctrl.Result{Requeue: true}, r.Update(ctx, &phasedRollout) //TODO probably there is no need for `Requeue: true` if we do an update of sts or phasedRollout, in this occasion and similar
+	}
+
 	// get sts targeting this phasedRollout
 	var sts appsv1.StatefulSet
 	stsNamespacedName := client.ObjectKey{
@@ -82,6 +91,12 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 	if err := r.Get(ctx, stsNamespacedName, &sts); err != nil {
 		if apierrs.IsNotFound(err) {
+			// if the phasedRollout has been marked for deletion and has a finalizer, remove it, it is ready to be deleted
+			if !phasedRollout.ObjectMeta.DeletionTimestamp.IsZero() && controllerutil.ContainsFinalizer(&phasedRollout, finalizerAnnotation) {
+				log.V(10).Info("removing finalizer, sts is not found", "stsName", phasedRollout.Spec.TargetRef)
+				controllerutil.RemoveFinalizer(&phasedRollout, finalizerAnnotation)
+				return ctrl.Result{Requeue: true}, r.Update(ctx, &phasedRollout)
+			}
 			log.V(10).Info("sts no found, will retry after a backoff", "stsName", sts.Name)
 			if phasedRollout.Status.Status != stsplusv1alpha1.PhasedRollotErrorSTSNotFound {
 				phasedRollout.Status.Status = stsplusv1alpha1.PhasedRollotErrorSTSNotFound
@@ -92,6 +107,25 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 		log.Error(err, "unable to get sts", "stsName", sts.Name)
 		return ctrl.Result{}, err
+	}
+
+	// if the phasedRollout has been marked for deletion, clean up the sts removing the partition config that was added
+	if !phasedRollout.ObjectMeta.DeletionTimestamp.IsZero() && controllerutil.ContainsFinalizer(&phasedRollout, finalizerAnnotation) {
+		if sts.Annotations[managedByAnnotation] == phasedRollout.Name &&
+			sts.Spec.UpdateStrategy.RollingUpdate != nil &&
+			sts.Spec.UpdateStrategy.RollingUpdate.Partition != nil &&
+			*sts.Spec.UpdateStrategy.RollingUpdate.Partition != 0 {
+			log.V(10).Info("removing partition config from sts as a clean up step before removingthe phasedRollout", "stsName", sts.Name)
+			if sts.Spec.UpdateStrategy.RollingUpdate.MaxUnavailable == nil {
+				sts.Spec.UpdateStrategy.RollingUpdate = nil
+			} else {
+				sts.Spec.UpdateStrategy.RollingUpdate.Partition = nil
+			}
+			return ctrl.Result{Requeue: true}, r.Update(ctx, &sts)
+		}
+		log.V(10).Info("removing finalizer, sts has no partition config to clean up", "stsName", sts.Name)
+		controllerutil.RemoveFinalizer(&phasedRollout, finalizerAnnotation)
+		return ctrl.Result{Requeue: true}, r.Update(ctx, &phasedRollout)
 	}
 
 	// check if we should manage the sts
@@ -124,7 +158,7 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if sts.Spec.UpdateStrategy.RollingUpdate != nil && sts.Spec.UpdateStrategy.RollingUpdate.Partition != nil && *sts.Spec.UpdateStrategy.RollingUpdate.Partition != 0 {
 			log.V(10).Info("removing the sts RollingUpdate partition config because of StandardRollingUpdate = true", "stsName", sts.Name)
 			sts.Spec.UpdateStrategy.RollingUpdate.Partition = nil
-			return ctrl.Result{Requeue: true}, r.Update(ctx, &sts) //TODO probably there is no need for `Requeue: true` if we do an update of sts or phasedRollout, in this occasion and similar
+			return ctrl.Result{Requeue: true}, r.Update(ctx, &sts)
 		}
 		if phasedRollout.Status.Status != stsplusv1alpha1.PhasedRollotSuspened {
 			log.Info("setting phasedRollout state", "state", stsplusv1alpha1.PhasedRollotSuspened)
