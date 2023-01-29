@@ -119,6 +119,22 @@ run: manifests generate fmt vet ## Run a controller from your host.
 run-debug: manifests generate fmt vet ## Run a controller from your host with debug level.
 	go run ./main.go -zap-log-level=10
 
+.PHONY: create-test-requirements
+deploy-test-requirements: ## Deploy the requirements to run tests, will deploy cert-manager and the prometheus operator.
+	helm repo add jetstack https://charts.jetstack.io
+	helm upgrade -i \
+	cert-manager jetstack/cert-manager \
+	--namespace cert-manager \
+	--create-namespace \
+	--version v1.11.0 \
+	--set installCRDs=true
+	helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+	helm upgrade -i prometheus prometheus-community/kube-prometheus-stack \
+	--namespace monitoring \
+	--create-namespace \
+	--set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false \
+	--set fullnameOverride=prometheus
+
 # If you wish built the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64 ). However, you must enable docker buildKit for it.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/

@@ -48,21 +48,33 @@ It uses [Controllers](https://kubernetes.io/docs/concepts/architecture/controlle
 which provides a reconcile function responsible for synchronizing resources untile the desired state is reached on the cluster 
 
 ### Test It Out
-1. Install the CRDs into the cluster:
+1. Deploy the requirements for tests in the cluster, i.e. cert-manager and the prometheus-operator:
+```sh
+make deploy-test-requirements
+```
+
+2. Port forward the prometheus endpoint so that it is reachable from your local development:
+```sh
+kubectl port-forward service/prometheus-prometheus -n monitoring 9090:9090
+```
+
+3. Install the CRDs into the cluster:
 
 ```sh
 make install
 ```
 
-2. Run your controller (this will run in the foreground, so switch to a new terminal if you want to leave it running):
+4. Run your controller (this will run in the foreground, so switch to a new terminal if you want to leave it running):
 
 ```sh
-# disable webhooks, otherwise you will need valid certs at:
-# /tmp/k8s-webhook-server/serving-certs/ca.crt
-# /tmp/k8s-webhook-server/serving-certs/tls.crt
-# /tmp/k8s-webhook-server/serving-certs/tls.key
+# disable webhooks, otherwise you will need valid certs files ca.crt, tls.crt and tls.key in the /tmp/k8s-webhook-server/serving-certs/ directory
 export ENABLE_WEBHOOKS=false
-make run
+make run #or `make run-debug` for debug logs
+```
+
+5. Run the sample:
+```sh
+kubectl apply -k config/samples/local-development
 ```
 
 **NOTE:** You can also run this in one step by running: `make install run`

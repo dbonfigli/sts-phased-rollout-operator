@@ -1,0 +1,9 @@
+apiVersion: sts.plus/v1alpha1
+kind: PhasedRollout
+metadata:
+  name: phasedrollout-sample
+  namespace: sample
+spec:
+  check:
+    query:
+      url: http://localhost:9090

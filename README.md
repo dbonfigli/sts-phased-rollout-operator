@@ -65,33 +65,16 @@ type: Opaque
 
 See the complete [Custom Resource Definition](./config/crd/bases/sts.plus_phasedrollouts.yaml).
 
-### Step by Step example
+### Step by Step Example
 
 Here we describe a step by step example to test the operator.
 
-1. Install cert-manager:
+1. Deploy the requirements for tests in the cluster, i.e. cert-manager and the prometheus-operator:
 ```sh
-helm repo add jetstack https://charts.jetstack.io
-helm install \
-  cert-manager jetstack/cert-manager \
-  --namespace cert-manager \
-  --create-namespace \
-  --version v1.11.0 \
-  --set installCRDs=true
+make deploy-test-requirements
 ```
 
-2. Install Prometheus Operator with Helm v3:
-```sh
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-
-kubectl create ns monitoring
-helm upgrade -i prometheus prometheus-community/kube-prometheus-stack \
---namespace monitoring \
---set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false \
---set fullnameOverride=prometheus
-```
-
-3. Install the CRDs into the cluster:
+2. Install the CRDs into the cluster:
 ```sh
 make install
 ```
@@ -104,6 +87,12 @@ make deploy IMG=dbonfigli/sts-plus-operator:latest
 4. Deploy the samples:
 ```sh
 kubectl apply -k config/samples/
+```
+
+5. Trigger a change in the statefulset and watch the status of the phased rolling update:
+```sh
+kubectl patch sts web -n sample --patch '{"spec":{"template":{"metadata":{"labels":{"trigger-rollout":"'$(date +%s)'"}}}}}'
+kubectl get phasedrollout phasedrollout-sample -o yaml -w -n sample
 ```
 
 ## Development
