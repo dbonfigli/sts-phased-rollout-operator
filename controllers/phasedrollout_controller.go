@@ -53,8 +53,8 @@ type PhasedRolloutReconciler struct {
 //+kubebuilder:rbac:groups=sts.plus,resources=phasedrollouts/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;update;watch;patch
 //+kubebuilder:rbac:groups=apps,resources=statefulsets/status,verbs=get
-//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;watch
-//+kubebuilder:rbac:groups="",resources=pods,verbs=get;watch
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
+//+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
 
 func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
