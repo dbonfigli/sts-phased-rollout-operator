@@ -115,7 +115,7 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			sts.Spec.UpdateStrategy.RollingUpdate != nil &&
 			sts.Spec.UpdateStrategy.RollingUpdate.Partition != nil &&
 			*sts.Spec.UpdateStrategy.RollingUpdate.Partition != 0 {
-			log.V(10).Info("removing partition config from sts as a clean up step before removingthe phasedRollout", "stsName", sts.Name)
+			log.V(10).Info("removing partition config from sts as a clean up step before removing the phasedRollout", "stsName", sts.Name)
 			if sts.Spec.UpdateStrategy.RollingUpdate.MaxUnavailable == nil {
 				sts.Spec.UpdateStrategy.RollingUpdate = nil
 			} else {
@@ -278,7 +278,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			Status:    stsplusv1alpha1.RollingPodWaitForPodToBeUpdated,
 			Partition: *sts.Spec.UpdateStrategy.RollingUpdate.Partition,
 		}
-		log.V(10).Info("sts partition has changed, update phased rollout status", "stsName", sts.Name)
+		log.Info("sts partition has changed, update phased rollout status", "stsName", sts.Name, "rollingPodStatus", stsplusv1alpha1.RollingPodWaitForPodToBeUpdated)
 		return ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
 	}
 
@@ -323,7 +323,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			log.V(10).Info("pod is not updated to sts UpdateRevision, will retry after a backoff", "pod", podName)
 			return ctrl.Result{RequeueAfter: time.Duration(r.RetryWaitSeconds) * time.Second}, nil
 		}
-		log.V(10).Info("pod is updated to UpdateRevision, setting RollingPodStatus for next step", "pod", podName)
+		log.Info("pod is updated to UpdateRevision, setting RollingPodStatus for next step", "pod", podName, "rollingPodStatus", stsplusv1alpha1.RollingPodWaitForAllPodsToBeAvailable)
 		phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodWaitForAllPodsToBeAvailable
 		phasedRollout.Status.RollingPodStatus.AnalisysStartTime = ""
 		phasedRollout.Status.RollingPodStatus.LastCheckTime = ""
@@ -343,7 +343,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			log.V(10).Info("some pods in sts are not available, will retry after a backoff", "stsName", sts.Name)
 			return ctrl.Result{RequeueAfter: time.Duration(r.RetryWaitSeconds) * time.Second}, nil // TODO can we avoid the requeue and just watch the status? is this delayed requeue needed at all since the status of the sts will change and we will see a reconciliation?
 		}
-		log.V(10).Info("all pods available for the sts, setting RollingPodStatus for next step", "stsName", sts.Name)
+		log.Info("all pods available for the sts, setting RollingPodStatus for next step", "stsName", sts.Name, "RollingPodStatus", stsplusv1alpha1.RollingPodWaitForInitialDelay)
 		phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodWaitForInitialDelay
 		phasedRollout.Status.RollingPodStatus.AnalisysStartTime = time.Now().Format(time.RFC3339)
 		phasedRollout.Status.RollingPodStatus.LastCheckTime = ""
@@ -364,7 +364,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 		}
 		initialDelayEndTime := analisysStartTime.Add(time.Second * time.Duration(phasedRollout.Spec.Check.InitialDelaySeconds))
 		if time.Now().After(initialDelayEndTime) {
-			log.V(10).Info("we are past the initial delay to roll a pod, setting RollingPodStatus for next step", "stsName", sts.Name)
+			log.Info("we are past the initial delay to roll a pod, setting RollingPodStatus for next step", "stsName", sts.Name, "RollingPodStatus", stsplusv1alpha1.RollingPodWaitForChecks)
 			phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodWaitForChecks
 			phasedRollout.Status.RollingPodStatus.LastCheckTime = ""
 			phasedRollout.Status.RollingPodStatus.ConsecutiveSuccessfulChecks = 0
@@ -461,7 +461,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			phasedRollout.Status.RollingPodStatus.ConsecutiveFailedChecks += 1
 			phasedRollout.Status.RollingPodStatus.TotalFailedChecks += 1
 		}
-		log.V(10).Info("check performed, will requeue after phasedRollout.Spec.Check.PeriodSeconds for next check", "checkResult", checkResult)
+		log.Info("check performed, will requeue for next check", "wasSuccessful", checkResult, "consecutiveSuccessfulChecks", phasedRollout.Status.RollingPodStatus.ConsecutiveSuccessfulChecks, "consecutiveFailedChecks", phasedRollout.Status.RollingPodStatus.ConsecutiveFailedChecks, "totalFailedChecks", phasedRollout.Status.RollingPodStatus.TotalFailedChecks)
 		return ctrl.Result{RequeueAfter: time.Duration(phasedRollout.Spec.Check.PeriodSeconds) * time.Second}, r.Status().Update(ctx, phasedRollout)
 
 	}
