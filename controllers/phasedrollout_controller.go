@@ -56,10 +56,6 @@ type PhasedRolloutReconciler struct {
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=get;watch
 //+kubebuilder:rbac:groups="",resources=pods,verbs=get;watch
 
-//TODO add events
-//TODO add a clean up so that when deleting phasedRollout the sts partition is get to the original value
-//TODO test with flux to understand if we have server side apply conflicts
-
 func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 	log.V(10).Info("starting reconciliation")

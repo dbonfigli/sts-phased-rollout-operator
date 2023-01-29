@@ -14,10 +14,7 @@ spec:
   check:
     initialDelaySeconds: 30
     periodSeconds: 30
-    maxTries: 10
     successThreshold: 3
-    failureThreshold: 3
     query:
       expr: "up{}"
-      url: prom:9000/xx
-      secretRef: prom-secret
+      url: prometheus-operated.default.svc.cluster.local:9090/
