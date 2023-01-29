@@ -510,7 +510,9 @@ var _ = Describe("PhasedRollout controller", func() {
 						return err == nil &&
 							pr.Status.Status == stsplusv1alpha1.PhasedRollotRolling &&
 							pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForChecks &&
-							pr.Status.RollingPodStatus.ConsecutiveFailedChecks > 0
+							pr.Status.RollingPodStatus.ConsecutiveSuccessfulChecks == 0 &&
+							pr.Status.RollingPodStatus.ConsecutiveFailedChecks > 0 &&
+							pr.Status.RollingPodStatus.TotalFailedChecks > 0
 					}, time.Duration(checkPeriodSeconds*2)*time.Second, interval).Should(BeTrue())
 
 					By("on multiple successful checks, sts partition should decrease (to 0)")
