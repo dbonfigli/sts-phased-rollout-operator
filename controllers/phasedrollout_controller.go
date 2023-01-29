@@ -26,6 +26,7 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,6 +48,7 @@ const finalizerAnnotation = "sts.plus/finalizer"
 type PhasedRolloutReconciler struct {
 	client.Client
 	Scheme           *runtime.Scheme
+	Recorder         record.EventRecorder
 	RetryWaitSeconds int
 }
 
@@ -57,6 +59,7 @@ type PhasedRolloutReconciler struct {
 //+kubebuilder:rbac:groups=apps,resources=statefulsets/status,verbs=get
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 //+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
+//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
@@ -145,6 +148,7 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if phasedRollout.Status.Status != stsplusv1alpha1.PhasedRollotErrorCannotManage {
 			message := "sts has not RollingUpdate as UpdateStrategy, cannot manage it"
 			log.Info(message, "stsName", sts.Name, "UpdateStrategy", sts.Spec.UpdateStrategy.Type)
+			r.Recorder.Eventf(&phasedRollout, "Warning", "CannotManage", message)
 			phasedRollout.Status.Status = stsplusv1alpha1.PhasedRollotErrorCannotManage
 			phasedRollout.Status.Message = message
 			return ctrl.Result{}, r.Status().Update(ctx, &phasedRollout)
@@ -175,6 +179,7 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			log.Info("setting phasedRollout state", "state", stsplusv1alpha1.PhasedRollotUpdated)
 			// if there was an ongoing phased rollout, then it has been completed, set RolloutEndTime and remove RollingPodStatus
 			if phasedRollout.Status.Status == stsplusv1alpha1.PhasedRollotRolling {
+				r.Recorder.Eventf(&phasedRollout, "Normal", "RolloutCompleted", "the phased rollout is completed")
 				phasedRollout.Status.RolloutEndTime = time.Now().Format(time.RFC3339)
 			}
 			phasedRollout.Status.Status = stsplusv1alpha1.PhasedRollotUpdated
@@ -240,6 +245,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 	// update phasedRollout status to "rolling"
 	if phasedRollout.Status.Status != stsplusv1alpha1.PhasedRollotRolling {
 		log.Info("setting phasedRollout state", "state", stsplusv1alpha1.PhasedRollotRolling)
+		r.Recorder.Eventf(phasedRollout, "Normal", "RolloutStarted", "the phased rollout is starting")
 		phasedRollout.Status.Status = stsplusv1alpha1.PhasedRollotRolling
 		phasedRollout.Status.Message = "phased rollout started"
 		phasedRollout.Status.UpdateRevision = sts.Status.UpdateRevision

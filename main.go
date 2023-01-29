@@ -92,6 +92,7 @@ func main() {
 	if err = (&controllers.PhasedRolloutReconciler{
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
+		Recorder:         mgr.GetEventRecorderFor("sts-plus-controller"),
 		RetryWaitSeconds: 30,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PhasedRollout")
