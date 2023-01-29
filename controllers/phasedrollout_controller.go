@@ -80,7 +80,7 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if phasedRollout.ObjectMeta.DeletionTimestamp.IsZero() && !controllerutil.ContainsFinalizer(&phasedRollout, finalizerAnnotation) {
 		log.V(10).Info("adding finalizer")
 		controllerutil.AddFinalizer(&phasedRollout, finalizerAnnotation)
-		return ctrl.Result{Requeue: true}, r.Update(ctx, &phasedRollout) //TODO probably there is no need for `Requeue: true` if we do an update of sts or phasedRollout, in this occasion and similar
+		return ctrl.Result{}, r.Update(ctx, &phasedRollout)
 	}
 
 	// get sts targeting this phasedRollout
@@ -95,7 +95,7 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			if !phasedRollout.ObjectMeta.DeletionTimestamp.IsZero() && controllerutil.ContainsFinalizer(&phasedRollout, finalizerAnnotation) {
 				log.V(10).Info("removing finalizer, sts is not found", "stsName", phasedRollout.Spec.TargetRef)
 				controllerutil.RemoveFinalizer(&phasedRollout, finalizerAnnotation)
-				return ctrl.Result{Requeue: true}, r.Update(ctx, &phasedRollout)
+				return ctrl.Result{}, r.Update(ctx, &phasedRollout)
 			}
 			log.V(10).Info("sts no found, will retry after a backoff", "stsName", sts.Name)
 			if phasedRollout.Status.Status != stsplusv1alpha1.PhasedRollotErrorSTSNotFound {
@@ -121,11 +121,11 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			} else {
 				sts.Spec.UpdateStrategy.RollingUpdate.Partition = nil
 			}
-			return ctrl.Result{Requeue: true}, r.Update(ctx, &sts)
+			return ctrl.Result{}, r.Update(ctx, &sts)
 		}
 		log.V(10).Info("removing finalizer, sts has no partition config to clean up", "stsName", sts.Name)
 		controllerutil.RemoveFinalizer(&phasedRollout, finalizerAnnotation)
-		return ctrl.Result{Requeue: true}, r.Update(ctx, &phasedRollout)
+		return ctrl.Result{}, r.Update(ctx, &phasedRollout)
 	}
 
 	// check if we should manage the sts
@@ -134,7 +134,7 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 	if needReconciliation {
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, nil
 	}
 	if !okToManage {
 		return ctrl.Result{RequeueAfter: time.Duration(r.RetryWaitSeconds) * time.Second}, nil
@@ -158,7 +158,7 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if sts.Spec.UpdateStrategy.RollingUpdate != nil && sts.Spec.UpdateStrategy.RollingUpdate.Partition != nil && *sts.Spec.UpdateStrategy.RollingUpdate.Partition != 0 {
 			log.V(10).Info("removing the sts RollingUpdate partition config because of StandardRollingUpdate = true", "stsName", sts.Name)
 			sts.Spec.UpdateStrategy.RollingUpdate.Partition = nil
-			return ctrl.Result{Requeue: true}, r.Update(ctx, &sts)
+			return ctrl.Result{}, r.Update(ctx, &sts)
 		}
 		if phasedRollout.Status.Status != stsplusv1alpha1.PhasedRollotSuspened {
 			log.Info("setting phasedRollout state", "state", stsplusv1alpha1.PhasedRollotSuspened)
@@ -187,7 +187,7 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, err
 		}
 		if mustReconcile {
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{}, nil
 		}
 	} else {
 		// need to perform a rollout
@@ -246,7 +246,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 		phasedRollout.Status.RolloutStartTime = time.Now().Format(time.RFC3339)
 		phasedRollout.Status.RolloutEndTime = ""
 		phasedRollout.Status.RollingPodStatus = nil
-		return ctrl.Result{Requeue: true}, r.Status().Update(ctx, phasedRollout)
+		return ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
 	}
 
 	// check if the revision has changed during the rollout, if so the phased rollout must restart the rolling update process from the beginning because there is a new revision to deploy
@@ -257,13 +257,13 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			return ctrl.Result{}, err
 		}
 		if mustReconcile {
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{}, nil
 		}
 		phasedRollout.Status.UpdateRevision = sts.Status.UpdateRevision
 		phasedRollout.Status.RolloutStartTime = time.Now().Format(time.RFC3339)
 		phasedRollout.Status.RolloutEndTime = ""
 		phasedRollout.Status.RollingPodStatus = nil
-		return ctrl.Result{Requeue: true}, r.Status().Update(ctx, phasedRollout)
+		return ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
 	}
 
 	// if partition == 0 there is nothing to do, basically we wait for the status of the phased rollout to become "updated"
@@ -279,7 +279,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			Partition: *sts.Spec.UpdateStrategy.RollingUpdate.Partition,
 		}
 		log.V(10).Info("sts partition has changed, update phased rollout status", "stsName", sts.Name)
-		return ctrl.Result{Requeue: true}, r.Status().Update(ctx, phasedRollout)
+		return ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
 	}
 
 	// if status is RollingPodWaitForPodToBeUpdated, wait for the pod to the right of the partition to be updated
@@ -296,7 +296,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			phasedRollout.Status.RollingPodStatus.ConsecutiveSuccessfulChecks = 0
 			phasedRollout.Status.RollingPodStatus.ConsecutiveFailedChecks = 0
 			phasedRollout.Status.RollingPodStatus.TotalFailedChecks = 0
-			return ctrl.Result{Requeue: true}, r.Status().Update(ctx, phasedRollout)
+			return ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
 		}
 
 		// get pod to the right of the partition
@@ -330,7 +330,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 		phasedRollout.Status.RollingPodStatus.ConsecutiveSuccessfulChecks = 0
 		phasedRollout.Status.RollingPodStatus.ConsecutiveFailedChecks = 0
 		phasedRollout.Status.RollingPodStatus.TotalFailedChecks = 0
-		return ctrl.Result{Requeue: true}, r.Status().Update(ctx, phasedRollout)
+		return ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
 	}
 
 	// if status is RollingPodWaitForAllPodsToBeAvailable wait for all pods to be available
@@ -350,7 +350,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 		phasedRollout.Status.RollingPodStatus.ConsecutiveSuccessfulChecks = 0
 		phasedRollout.Status.RollingPodStatus.ConsecutiveFailedChecks = 0
 		phasedRollout.Status.RollingPodStatus.TotalFailedChecks = 0
-		return ctrl.Result{Requeue: true}, r.Status().Update(ctx, phasedRollout)
+		return ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
 	}
 
 	// if status is RollingPodWaitForInitialDelay wait initialDelay before starting checks
@@ -370,7 +370,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			phasedRollout.Status.RollingPodStatus.ConsecutiveSuccessfulChecks = 0
 			phasedRollout.Status.RollingPodStatus.ConsecutiveFailedChecks = 0
 			phasedRollout.Status.RollingPodStatus.TotalFailedChecks = 0
-			return ctrl.Result{Requeue: true}, r.Status().Update(ctx, phasedRollout)
+			return ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
 		}
 		log.V(10).Info("initial delay before rolling next pod is not completed, will retry after the delay is past", "stsName", sts.Name)
 		return ctrl.Result{RequeueAfter: time.Until(initialDelayEndTime)}, nil
@@ -389,7 +389,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			log.Info("all checks passed, decreasing partition", "stsName", sts.Name)
 			newPartitionValue := *sts.Spec.UpdateStrategy.RollingUpdate.Partition - 1
 			sts.Spec.UpdateStrategy.RollingUpdate.Partition = &newPartitionValue
-			return ctrl.Result{Requeue: true}, r.Update(ctx, sts)
+			return ctrl.Result{}, r.Update(ctx, sts)
 
 		}
 
@@ -399,7 +399,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 				log.Error(err, "unable to parse phasedRollout.Status.RollingPodStatus.LastCheckTime")
 				// go back to a good status
 				phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodWaitForAllPodsToBeAvailable
-				return ctrl.Result{Requeue: true}, r.Status().Update(ctx, phasedRollout)
+				return ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
 			}
 			nextCheckTime := lastCheckTime.Add(time.Second * time.Duration(phasedRollout.Spec.Check.PeriodSeconds))
 			if !time.Now().After(nextCheckTime) {
