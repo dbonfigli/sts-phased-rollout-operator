@@ -10,11 +10,17 @@ kubectl apply -k config/samples/
 ```
 
 2. Build and push your image to the location specified by `IMG`:
-	
+
 ```sh
 make docker-build docker-push IMG=<some-registry>/sts-plus-operator:tag
 ```
-	
+If you use kind you can push the image directy to the cluster with:
+```sh
+IMAGE=<some-registry>/sts-plus-operator:tag
+make docker-build IMG=$IMAGE
+kind load docker-image $IMAGE
+```
+
 3. Deploy the controller to the cluster with the image specified by `IMG`:
 
 ```sh
@@ -52,9 +58,9 @@ make install
 
 ```sh
 # disable webhooks, otherwise you will need valid certs at:
-# /k8s-webhook-server/serving-certs/ca.crt
-# /k8s-webhook-server/serving-certs/tls.crt
-# /k8s-webhook-server/serving-certs/tls.key
+# /tmp/k8s-webhook-server/serving-certs/ca.crt
+# /tmp/k8s-webhook-server/serving-certs/tls.crt
+# /tmp/k8s-webhook-server/serving-certs/tls.key
 export ENABLE_WEBHOOKS=false
 make run
 ```
