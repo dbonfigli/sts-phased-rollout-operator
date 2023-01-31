@@ -13,7 +13,7 @@ webhooks:
       name: webhook-service
       namespace: system
       path: /mutate-sts-plus-v1alpha1-phasedrollout
-  failurePolicy: Fail
+  failurePolicy: Ignore
   name: mphasedrollout.kb.io
   rules:
   - apiGroups:
@@ -41,7 +41,7 @@ webhooks:
       name: webhook-service
       namespace: system
       path: /validate-sts-plus-v1alpha1-phasedrollout
-  failurePolicy: Fail
+  failurePolicy: Ignore
   name: vphasedrollout.kb.io
   rules:
   - apiGroups:
