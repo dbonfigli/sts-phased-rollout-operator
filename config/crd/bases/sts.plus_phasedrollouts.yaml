@@ -15,7 +15,24 @@ spec:
     singular: phasedrollout
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: target statefulset name
+      jsonPath: .spec.targetRef
+      name: target-ref
+      type: string
+    - jsonPath: .status.status
+      name: status
+      type: string
+    - jsonPath: .status.rolloutStartTime
+      name: rollout-start-time
+      type: date
+    - jsonPath: .status.rolloutEndTime
+      name: rollout-end-time
+      type: date
+    - jsonPath: .metadata.creationTimestamp
+      name: age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: PhasedRollout is the Schema for the phasedrollouts API
