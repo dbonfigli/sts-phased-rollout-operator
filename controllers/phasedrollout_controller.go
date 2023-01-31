@@ -447,7 +447,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 		if err != nil {
 			log.Error(err, "error setting up prometheus client")
 			phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodPrometheusError
-			return ctrl.Result{RequeueAfter: time.Duration(r.RetryWaitSeconds) * time.Second}, r.Status().Update(ctx, phasedRollout) //TODO insteand of retrying we should watch for a change of config
+			return ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
 		}
 
 		// perform prometheus check
