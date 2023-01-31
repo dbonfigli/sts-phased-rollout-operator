@@ -114,15 +114,15 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// if the phasedRollout has been marked for deletion, clean up the sts removing the partition config that was added
 	if !phasedRollout.ObjectMeta.DeletionTimestamp.IsZero() && controllerutil.ContainsFinalizer(&phasedRollout, finalizerAnnotation) {
-		if sts.Annotations[managedByAnnotation] == phasedRollout.Name &&
-			sts.Spec.UpdateStrategy.RollingUpdate != nil &&
-			sts.Spec.UpdateStrategy.RollingUpdate.Partition != nil &&
-			*sts.Spec.UpdateStrategy.RollingUpdate.Partition != 0 {
-			log.V(10).Info("removing partition config from sts as a clean up step before removing the phasedRollout", "stsName", sts.Name)
-			if sts.Spec.UpdateStrategy.RollingUpdate.MaxUnavailable == nil {
-				sts.Spec.UpdateStrategy.RollingUpdate = nil
-			} else {
-				sts.Spec.UpdateStrategy.RollingUpdate.Partition = nil
+		if sts.Annotations[managedByAnnotation] == phasedRollout.Name {
+			log.V(10).Info("cleaning up the sts before removing the phasedRollout", "stsName", sts.Name)
+			delete(sts.Annotations, managedByAnnotation)
+			if sts.Spec.UpdateStrategy.RollingUpdate != nil && sts.Spec.UpdateStrategy.RollingUpdate.Partition != nil && *sts.Spec.UpdateStrategy.RollingUpdate.Partition != 0 {
+				if sts.Spec.UpdateStrategy.RollingUpdate.MaxUnavailable == nil {
+					sts.Spec.UpdateStrategy.RollingUpdate = nil
+				} else {
+					sts.Spec.UpdateStrategy.RollingUpdate.Partition = nil
+				}
 			}
 			return ctrl.Result{}, r.Update(ctx, &sts)
 		}
