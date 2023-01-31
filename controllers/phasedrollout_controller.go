@@ -537,6 +537,9 @@ func (r *PhasedRolloutReconciler) manageSTS(ctx context.Context, sts *appsv1.Sta
 
 func mapSTSToPhasedRollout(o client.Object) []reconcile.Request {
 	log := log.FromContext(context.Background())
+
+	// we are using this home made "ownership" mechanism instead of an indexer because we want to have only one phasedRollout per sts
+	// and we want to report an error as status of the phasedRollout otherwise
 	phasedRolloutName, ok := o.GetAnnotations()[managedByAnnotation]
 	if ok {
 		log.V(10).Info("found annotation in sts for mapped request", "stsName", o.GetName(), "phasedRolloutName", phasedRolloutName)
@@ -550,7 +553,7 @@ func mapSTSToPhasedRollout(o client.Object) []reconcile.Request {
 		}
 	}
 
-	// TODO what to do here? look for all phasedRollouts if not there?
+	// even if the sts is created after the phasedRollout, at some point the reconciliation will for it will add the ownership annotation so it is safe to ignore the sts here
 	log.V(10).Info("no annotation in sts for mapped request", "stsName", o.GetName(), "annotation", managedByAnnotation)
 	return []reconcile.Request{}
 
