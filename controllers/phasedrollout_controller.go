@@ -277,7 +277,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 	// if partition == 0 there is nothing to do, basically we wait for the status of the phased rollout to become "updated"
 	if sts.Spec.UpdateStrategy.RollingUpdate == nil || sts.Spec.UpdateStrategy.RollingUpdate.Partition == nil || *sts.Spec.UpdateStrategy.RollingUpdate.Partition == 0 {
 		log.V(10).Info("sts partition is now 0, the phased rollot is over", "stsName", sts.Name)
-		// at some point the change of status of the sts will trigger a reconciliation
+		// at some point the change of status of the sts (currentRevision == updateRevision) will trigger a reconciliation
 		return ctrl.Result{}, nil
 	}
 
@@ -350,7 +350,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 		}
 		if sts.Status.AvailableReplicas != *sts.Spec.Replicas {
 			log.V(10).Info("some pods in sts are not available", "stsName", sts.Name)
-			// at some point the change of status of the sts will trigger a reconciliation
+			// at some point the change of status of the sts (statefulset.status.updatedReplicas) will trigger a reconciliation
 			return ctrl.Result{}, nil
 		}
 		log.Info("all pods available for the sts, setting RollingPodStatus for next step", "stsName", sts.Name, "RollingPodStatus", stsplusv1alpha1.RollingPodWaitForInitialDelay)
@@ -586,7 +586,7 @@ func (r *PhasedRolloutReconciler) mapSecretToPhasedRollout(o client.Object) []re
 
 	requests := make([]reconcile.Request, len(attachedhasedRollouts.Items))
 	for i, item := range attachedhasedRollouts.Items {
-		log.V(10).Info("found secret referened by a phasedRollout", "secretName", o.GetName(), "phasedRolloutName", item.GetName())
+		log.V(10).Info("found secret referenced by a phasedRollout", "secretName", o.GetName(), "phasedRolloutName", item.GetName())
 		requests[i] = reconcile.Request{
 			NamespacedName: types.NamespacedName{
 				Name:      item.GetName(),
