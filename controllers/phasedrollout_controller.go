@@ -106,9 +106,9 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			if phasedRollout.Status.Status != stsplusv1alpha1.PhasedRollotErrorSTSNotFound {
 				phasedRollout.Status.Status = stsplusv1alpha1.PhasedRollotErrorSTSNotFound
 				phasedRollout.Status.Message = "target sts " + phasedRollout.Spec.TargetRef + "not found in namespace " + req.Namespace
-				return ctrl.Result{RequeueAfter: time.Duration(r.RetryWaitSeconds) * time.Second}, r.Status().Update(ctx, &phasedRollout)
+				return ctrl.Result{}, r.Status().Update(ctx, &phasedRollout)
 			}
-			return ctrl.Result{RequeueAfter: time.Duration(r.RetryWaitSeconds) * time.Second}, nil
+			return ctrl.Result{}, nil // no need to requeue: the indexer will trigger a reconciliation when the sts will be created
 		}
 		log.Error(err, "unable to get sts", "stsName", sts.Name)
 		return ctrl.Result{}, err
@@ -135,14 +135,10 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// check if we should manage the sts
 	okToManage, needReconciliation, err := r.manageSTS(ctx, &sts, &phasedRollout)
-	if err != nil {
+	if err != nil || needReconciliation || !okToManage {
+		// if needReconciliation == true, it means that there has been a change in the sts or phasedRollout so a reconciliation will be in the queue
+		// if okToManage == false, no need to requeue: a change in the sts (tag removed by the other phased rollout) will trigger a reconciliation
 		return ctrl.Result{}, err
-	}
-	if needReconciliation {
-		return ctrl.Result{}, nil
-	}
-	if !okToManage {
-		return ctrl.Result{RequeueAfter: time.Duration(r.RetryWaitSeconds) * time.Second}, nil
 	}
 
 	// check if the UpdateStrategy is RollingUpdate
@@ -394,7 +390,8 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			// all checks passed, decrease partition
 			if sts.Spec.UpdateStrategy.RollingUpdate == nil || sts.Spec.UpdateStrategy.RollingUpdate.Partition == nil || *sts.Spec.UpdateStrategy.RollingUpdate.Partition == 0 {
 				log.Info("sts.Spec.UpdateStrategy.RollingUpdate.Partition is not defined or 0 during a rolling update, this should never happen", "stsName", sts.Name)
-				return ctrl.Result{RequeueAfter: time.Duration(r.RetryWaitSeconds) * time.Second}, nil
+				// at some point the change of status of the sts (currentRevision == updateRevision) will trigger a reconciliation
+				return ctrl.Result{}, nil
 			}
 			log.Info("all checks passed, decreasing partition", "stsName", sts.Name)
 			newPartitionValue := *sts.Spec.UpdateStrategy.RollingUpdate.Partition - 1
@@ -551,23 +548,27 @@ func (r *PhasedRolloutReconciler) manageSTS(ctx context.Context, sts *appsv1.Sta
 func (r *PhasedRolloutReconciler) mapSTSToPhasedRollout(o client.Object) []reconcile.Request {
 	log := log.FromContext(context.Background())
 
-	// we are using this home made "ownership" mechanism instead of an indexer because we want to have only one phasedRollout per sts
-	// and we want to report an error as status of the phasedRollout otherwise
-	phasedRolloutName, ok := o.GetAnnotations()[managedByAnnotation]
-	if ok {
-		log.V(10).Info("found annotation in sts for mapped request", "stsName", o.GetName(), "phasedRolloutName", phasedRolloutName)
-		return []reconcile.Request{
-			{
-				NamespacedName: types.NamespacedName{
-					Namespace: o.GetNamespace(),
-					Name:      phasedRolloutName,
-				},
+	attachedhasedRollouts := &stsplusv1alpha1.PhasedRolloutList{}
+	listOps := &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(".spec.targetRef", o.GetName()),
+		Namespace:     o.GetNamespace(),
+	}
+	err := r.List(context.TODO(), attachedhasedRollouts, listOps)
+	if err != nil {
+		return []reconcile.Request{}
+	}
+
+	requests := make([]reconcile.Request, len(attachedhasedRollouts.Items))
+	for i, item := range attachedhasedRollouts.Items {
+		log.V(10).Info("found sts referened by a phasedRollout", "stsName", o.GetName(), "phasedRolloutName", item.GetName())
+		requests[i] = reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      item.GetName(),
+				Namespace: item.GetNamespace(),
 			},
 		}
 	}
-
-	// even if the sts is created after the phasedRollout, at some point the reconciliation will for it will add the ownership annotation so it is safe to ignore the sts here
-	return []reconcile.Request{}
+	return requests
 
 }
 
@@ -599,6 +600,16 @@ func (r *PhasedRolloutReconciler) mapSecretToPhasedRollout(o client.Object) []re
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *PhasedRolloutReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &stsplusv1alpha1.PhasedRollout{}, ".spec.targetRef", func(rawObj client.Object) []string {
+		phasedRollout := rawObj.(*stsplusv1alpha1.PhasedRollout)
+		if phasedRollout.Spec.TargetRef == "" {
+			return nil
+		}
+		return []string{phasedRollout.Spec.TargetRef}
+	}); err != nil {
+		return err
+	}
 
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &stsplusv1alpha1.PhasedRollout{}, ".spec.check.query.secretRef", func(rawObj client.Object) []string {
 		phasedRollout := rawObj.(*stsplusv1alpha1.PhasedRollout)
