@@ -36,6 +36,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -329,6 +330,55 @@ var _ = Describe("PhasedRollout controller", func() {
 		})
 	})
 
+	Describe("Finalizer for PhasedRollout", func() {
+		Context("When the PhasedRollout is deleted", func() {
+			It("Should cleanup the sts", func() {
+
+				By("Creating the sts")
+				sts := stsTemplate
+				sts.Name = randomName(STSName)
+				Expect(k8sClient.Create(context.Background(), &sts)).Should(Succeed())
+
+				By("Creating the PhasedRollout")
+				phasedRollout := phasedRolloutTemplate
+				phasedRollout.Name = randomName(phasedRollotName)
+				phasedRollout.Spec.TargetRef = sts.Name
+				Expect(k8sClient.Create(context.Background(), &phasedRollout)).Should(Succeed())
+
+				By("Expecting the sts to report to be managed by the phasedRollout with partition config to block unmanaged rolling updates")
+				Eventually(func() bool {
+					var readSTS appsv1.StatefulSet
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: sts.Name}, &readSTS)
+					return err == nil &&
+						readSTS.Annotations != nil &&
+						readSTS.Annotations[managedByAnnotation] == phasedRollout.Name &&
+						readSTS.Spec.UpdateStrategy.RollingUpdate != nil &&
+						*readSTS.Spec.UpdateStrategy.RollingUpdate.Partition == 2
+				}, timeout, interval).Should(BeTrue())
+
+				By("Deleting the PhasedRollout")
+				Expect(k8sClient.Delete(context.Background(), &phasedRollout)).Should(Succeed())
+
+				By("Expecting the phasedRollout to be deleted")
+				Eventually(func() bool {
+					var pr stsplusv1alpha1.PhasedRollout
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
+					return apierrs.IsNotFound(err)
+				}, timeout, interval).Should(BeTrue())
+
+				By("Expecting the sts to have UpdateStrategy.RollingUpdate.Partition == 0 and not have the phasedRollout annotation")
+				Eventually(func() bool {
+					var readSTS appsv1.StatefulSet
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: sts.Name}, &readSTS)
+					_, hasAnnotation := readSTS.Annotations[managedByAnnotation]
+					return err == nil &&
+						(readSTS.Spec.UpdateStrategy.RollingUpdate == nil || readSTS.Spec.UpdateStrategy.RollingUpdate.Partition == nil || *readSTS.Spec.UpdateStrategy.RollingUpdate.Partition == 0) &&
+						!hasAnnotation
+				}, timeout, interval).Should(BeTrue())
+			})
+		})
+	})
+
 	Describe("Perform phased rollout", func() {
 
 		var fakePrometheusServer *fakePrometheusServer
@@ -381,6 +431,7 @@ var _ = Describe("PhasedRollout controller", func() {
 				phasedRollout := phasedRolloutTemplate
 				phasedRollout.Name = randomName(phasedRollotName)
 				phasedRollout.Spec.TargetRef = sts.Name
+				phasedRollout.Spec.Check.Query.SecretRef = "prom-secret"
 				Expect(k8sClient.Create(context.Background(), &phasedRollout)).Should(Succeed())
 
 				By("Expecting the phasedRollout to have status \"updated\"")
@@ -406,16 +457,30 @@ var _ = Describe("PhasedRollout controller", func() {
 						pr.Status.RollingPodStatus.Partition == 2
 				}, timeout, interval).Should(BeTrue())
 
-				By("after waitForInitialDelay, status should be \"waitForChecks\"")
+				By("Status.RollingPodStatus.Status should be prometheusError")
 				Eventually(func() bool {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
 						pr.Status.Status == stsplusv1alpha1.PhasedRollotRolling &&
 						pr.Status.UpdateRevision == "web-0000000001" &&
-						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForChecks &&
-						pr.Status.RollingPodStatus.Partition == 2
-				}, time.Duration(checkInitialDelaySeconds+timeout)*time.Second, interval).Should(BeTrue())
+						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodPrometheusError
+				}, time.Duration(checkPeriodSeconds*2)*time.Second, interval).Should(BeTrue())
+
+				By("Creating the prometheus secret")
+				promSecret := &corev1.Secret{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Secret",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "prom-secret",
+						Namespace: ns,
+					},
+					Type: "Opaque",
+					Data: map[string][]byte{"token": []byte("tokenvalue")},
+				}
+				Expect(k8sClient.Create(context.Background(), promSecret)).Should(Succeed())
 
 				// here we are not checking for 2 consecutiveSuccessfulChecks because ConsecutiveSuccessfulChecks == 2 only briefly before moving to the next status
 				By("there should be 1 consecutiveSuccessfulChecks")
