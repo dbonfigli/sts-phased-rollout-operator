@@ -56,6 +56,13 @@ func NewPrometheusClient(endpoint string, insecureSkipVerify bool, username, pas
 		prom.client = &http.Client{Transport: t}
 	}
 
+	if (username != "" && password == "") || (username == "" && password != "") {
+		return nil, fmt.Errorf("if password or username are used for basic authentication, both should be a non-empty string")
+	}
+	if username != "" && token != "" {
+		return nil, fmt.Errorf("you can either configure the token for bearer authentication or the username and password for basic authentication, not both")
+	}
+
 	prom.username = username
 	prom.password = password
 	prom.token = token

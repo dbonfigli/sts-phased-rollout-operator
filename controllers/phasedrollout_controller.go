@@ -18,12 +18,14 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -428,10 +430,15 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			}
 			if err := r.Get(ctx, podNamespacedName, &secret); err != nil {
 				if apierrs.IsNotFound(err) {
-					log.Info("secret no found, will retry after a backoff", "secret", secretRef)
-					return ctrl.Result{RequeueAfter: time.Duration(r.RetryWaitSeconds) * time.Second}, nil
+					log.Info("secret for prometheus endpoint not found", "secretName", secretRef)
+					if phasedRollout.Status.RollingPodStatus.Status != stsplusv1alpha1.RollingPodPrometheusError {
+						r.Recorder.Eventf(phasedRollout, "Warning", "PrometheusConfigError", fmt.Sprintf("secret \"%s\" for prometheus endpoint not found", secretRef))
+						phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodPrometheusError
+						return ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
+					}
+					return ctrl.Result{}, nil
 				}
-				log.Error(err, "unable to get secret", "secret", secretRef)
+				log.Error(err, "unable to get secret", "secretName", secretRef)
 				return ctrl.Result{}, err
 			}
 			usernameByte := secret.Data["username"]
@@ -446,8 +453,12 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 		promClient, err := prometheus.NewPrometheusClient(phasedRollout.Spec.Check.Query.URL, phasedRollout.Spec.Check.Query.InsecureSkipVerify, username, password, token)
 		if err != nil {
 			log.Error(err, "error setting up prometheus client")
-			phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodPrometheusError
-			return ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
+			if phasedRollout.Status.RollingPodStatus.Status != stsplusv1alpha1.RollingPodPrometheusError {
+				r.Recorder.Eventf(phasedRollout, "Warning", "PrometheusConfigError", err.Error())
+				phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodPrometheusError
+				return ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
+			}
+			return ctrl.Result{}, nil
 		}
 
 		// perform prometheus check
@@ -535,7 +546,7 @@ func (r *PhasedRolloutReconciler) manageSTS(ctx context.Context, sts *appsv1.Sta
 
 }
 
-func mapSTSToPhasedRollout(o client.Object) []reconcile.Request {
+func (r *PhasedRolloutReconciler) mapSTSToPhasedRollout(o client.Object) []reconcile.Request {
 	log := log.FromContext(context.Background())
 
 	// we are using this home made "ownership" mechanism instead of an indexer because we want to have only one phasedRollout per sts
@@ -554,17 +565,56 @@ func mapSTSToPhasedRollout(o client.Object) []reconcile.Request {
 	}
 
 	// even if the sts is created after the phasedRollout, at some point the reconciliation will for it will add the ownership annotation so it is safe to ignore the sts here
-	log.V(10).Info("no annotation in sts for mapped request", "stsName", o.GetName(), "annotation", managedByAnnotation)
 	return []reconcile.Request{}
 
 }
 
+func (r *PhasedRolloutReconciler) mapSecretToPhasedRollout(o client.Object) []reconcile.Request {
+	log := log.FromContext(context.Background())
+
+	attachedhasedRollouts := &stsplusv1alpha1.PhasedRolloutList{}
+	listOps := &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(".spec.check.query.secretRef", o.GetName()),
+		Namespace:     o.GetNamespace(),
+	}
+	err := r.List(context.TODO(), attachedhasedRollouts, listOps)
+	if err != nil {
+		return []reconcile.Request{}
+	}
+
+	requests := make([]reconcile.Request, len(attachedhasedRollouts.Items))
+	for i, item := range attachedhasedRollouts.Items {
+		log.V(10).Info("found secret referened by a phasedRollout", "secretName", o.GetName(), "phasedRolloutName", item.GetName())
+		requests[i] = reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      item.GetName(),
+				Namespace: item.GetNamespace(),
+			},
+		}
+	}
+	return requests
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *PhasedRolloutReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &stsplusv1alpha1.PhasedRollout{}, ".spec.check.query.secretRef", func(rawObj client.Object) []string {
+		phasedRollout := rawObj.(*stsplusv1alpha1.PhasedRollout)
+		if phasedRollout.Spec.Check.Query.SecretRef == "" {
+			return nil
+		}
+		return []string{phasedRollout.Spec.Check.Query.SecretRef}
+	}); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&stsplusv1alpha1.PhasedRollout{}).
 		Watches(&source.Kind{Type: &appsv1.StatefulSet{}},
-			handler.EnqueueRequestsFromMapFunc(mapSTSToPhasedRollout),
+			handler.EnqueueRequestsFromMapFunc(r.mapSTSToPhasedRollout),
+		).
+		Watches(&source.Kind{Type: &corev1.Secret{}},
+			handler.EnqueueRequestsFromMapFunc(r.mapSecretToPhasedRollout),
 		).
 		Complete(r)
 }
