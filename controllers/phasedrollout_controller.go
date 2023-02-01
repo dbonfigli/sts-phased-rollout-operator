@@ -277,7 +277,8 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 	// if partition == 0 there is nothing to do, basically we wait for the status of the phased rollout to become "updated"
 	if sts.Spec.UpdateStrategy.RollingUpdate == nil || sts.Spec.UpdateStrategy.RollingUpdate.Partition == nil || *sts.Spec.UpdateStrategy.RollingUpdate.Partition == 0 {
 		log.V(10).Info("sts partition is now 0, the phased rollot is over", "stsName", sts.Name)
-		return ctrl.Result{RequeueAfter: time.Duration(r.RetryWaitSeconds) * time.Second}, nil
+		// at some point the change of status of the sts will trigger a reconciliation
+		return ctrl.Result{}, nil
 	}
 
 	// if there is no reported status for the current pod rolling or if there was a change in sts partition, update the status: we now must wait for the next pod to be rolled
@@ -316,7 +317,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 		}
 		if err := r.Get(ctx, podNamespacedName, &pod); err != nil {
 			if apierrs.IsNotFound(err) {
-				log.V(10).Info("pod no found, will retry after a backoff", "pod", podName)
+				log.V(10).Info("pod not found, will retry after a backoff", "pod", podName)
 				return ctrl.Result{RequeueAfter: time.Duration(r.RetryWaitSeconds) * time.Second}, nil
 			}
 			log.Error(err, "unable to get pod", "pod", podName)
@@ -348,8 +349,9 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			sts.Spec.Replicas = &one
 		}
 		if sts.Status.AvailableReplicas != *sts.Spec.Replicas {
-			log.V(10).Info("some pods in sts are not available, will retry after a backoff", "stsName", sts.Name)
-			return ctrl.Result{RequeueAfter: time.Duration(r.RetryWaitSeconds) * time.Second}, nil // TODO can we avoid the requeue and just watch the status? is this delayed requeue needed at all since the status of the sts will change and we will see a reconciliation?
+			log.V(10).Info("some pods in sts are not available", "stsName", sts.Name)
+			// at some point the change of status of the sts will trigger a reconciliation
+			return ctrl.Result{}, nil
 		}
 		log.Info("all pods available for the sts, setting RollingPodStatus for next step", "stsName", sts.Name, "RollingPodStatus", stsplusv1alpha1.RollingPodWaitForInitialDelay)
 		phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodWaitForInitialDelay
@@ -368,7 +370,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			log.Error(err, "unable to parse phasedRollout.Status.RollingPodStatus.AnalisysStartTime")
 			// go back to a good status
 			phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodWaitForAllPodsToBeAvailable
-			return ctrl.Result{RequeueAfter: time.Duration(r.RetryWaitSeconds) * time.Second}, r.Status().Update(ctx, phasedRollout)
+			return ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
 		}
 		initialDelayEndTime := analisysStartTime.Add(time.Second * time.Duration(phasedRollout.Spec.Check.InitialDelaySeconds))
 		if time.Now().After(initialDelayEndTime) {
