@@ -453,6 +453,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					return err == nil &&
 						pr.Status.Status == stsplusv1alpha1.PhasedRollotRolling &&
 						pr.Status.UpdateRevision == "web-0000000001" &&
+						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForInitialDelay &&
 						pr.Status.RollingPodStatus.Partition == 2
 				}, timeout, interval).Should(BeTrue())
@@ -464,6 +465,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					return err == nil &&
 						pr.Status.Status == stsplusv1alpha1.PhasedRollotRolling &&
 						pr.Status.UpdateRevision == "web-0000000001" &&
+						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodPrometheusError
 				}, time.Duration(checkPeriodSeconds*2)*time.Second, interval).Should(BeTrue())
 
@@ -490,6 +492,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					return err == nil &&
 						pr.Status.Status == stsplusv1alpha1.PhasedRollotRolling &&
 						pr.Status.UpdateRevision == "web-0000000001" &&
+						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForChecks &&
 						pr.Status.RollingPodStatus.ConsecutiveSuccessfulChecks == 1
 				}, time.Duration(checkPeriodSeconds*2)*time.Second, interval).Should(BeTrue())
@@ -501,6 +504,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					return err == nil &&
 						pr.Status.Status == stsplusv1alpha1.PhasedRollotRolling &&
 						pr.Status.UpdateRevision == "web-0000000001" &&
+						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForPodToBeUpdated
 				}, checkPeriodSeconds*2, interval).Should(BeTrue())
 
@@ -529,6 +533,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
 						pr.Status.Status == stsplusv1alpha1.PhasedRollotRolling &&
+						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForAllPodsToBeAvailable
 				}, timeout, interval).Should(BeTrue())
 
@@ -544,6 +549,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
 						pr.Status.Status == stsplusv1alpha1.PhasedRollotRolling &&
+						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForInitialDelay &&
 						pr.Status.RollingPodStatus.Partition == 1
 				}, timeout, interval).Should(BeTrue())
@@ -564,6 +570,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
 						pr.Status.Status == stsplusv1alpha1.PhasedRollotRolling &&
+						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodPrometheusError
 				}, time.Duration(checkPeriodSeconds*2)*time.Second, interval).Should(BeTrue())
 
@@ -575,6 +582,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
 						pr.Status.Status == stsplusv1alpha1.PhasedRollotRolling &&
+						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForChecks &&
 						pr.Status.RollingPodStatus.ConsecutiveSuccessfulChecks == 0 &&
 						pr.Status.RollingPodStatus.ConsecutiveFailedChecks > 0 &&
