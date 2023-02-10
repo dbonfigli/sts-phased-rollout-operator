@@ -12,11 +12,11 @@ kubectl apply -k config/samples/
 2. Build and push your image to the location specified by `IMG`:
 
 ```sh
-make docker-build docker-push IMG=<some-registry>/sts-plus-operator:tag
+make docker-build docker-push IMG=<some-registry>/sts-phased-rollout-operator:tag
 ```
 If you use kind you can push the image directy to the cluster with:
 ```sh
-IMAGE=<some-registry>/sts-plus-operator:tag
+IMAGE=<some-registry>/sts-phased-rollout-operator:tag
 make docker-build IMG=$IMAGE
 kind load docker-image $IMAGE
 ```
@@ -24,7 +24,7 @@ kind load docker-image $IMAGE
 3. Deploy the controller to the cluster with the image specified by `IMG`:
 
 ```sh
-make deploy IMG=<some-registry>/sts-plus-operator:tag
+make deploy IMG=<some-registry>/sts-phased-rollout-operator:tag
 ```
 
 ### Uninstall CRDs

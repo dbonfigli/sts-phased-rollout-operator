@@ -31,8 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	stsplusv1alpha1 "github.com/dbonfigli/sts-plus-operator/api/v1alpha1"
-	"github.com/dbonfigli/sts-plus-operator/controllers"
+	stsplusv1alpha1 "github.com/dbonfigli/sts-phased-rollout-operator/api/v1alpha1"
+	"github.com/dbonfigli/sts-phased-rollout-operator/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -92,7 +92,7 @@ func main() {
 	if err = (&controllers.PhasedRolloutReconciler{
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
-		Recorder:         mgr.GetEventRecorderFor("sts-plus-controller"),
+		Recorder:         mgr.GetEventRecorderFor("sts-phased-rollout-controller"),
 		RetryWaitSeconds: 30,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PhasedRollout")

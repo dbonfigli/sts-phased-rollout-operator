@@ -1,4 +1,4 @@
-module github.com/dbonfigli/sts-plus-operator
+module github.com/dbonfigli/sts-phased-rollout-operator
 
 go 1.19
 

@@ -33,7 +33,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	stsplusv1alpha1 "github.com/dbonfigli/sts-plus-operator/api/v1alpha1"
+	stsplusv1alpha1 "github.com/dbonfigli/sts-phased-rollout-operator/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -88,7 +88,7 @@ var _ = BeforeSuite(func() {
 	err = (&PhasedRolloutReconciler{
 		Client:           k8sManager.GetClient(),
 		Scheme:           k8sManager.GetScheme(),
-		Recorder:         k8sManager.GetEventRecorderFor("sts-plus-controller"),
+		Recorder:         k8sManager.GetEventRecorderFor("sts-phased-rollout-controller"),
 		RetryWaitSeconds: 1, //try to speed up tests
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())

@@ -4,8 +4,8 @@ layout:
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
-projectName: sts-plus-operator
-repo: github.com/dbonfigli/sts-plus-operator
+projectName: sts-phased-rollout-operator
+repo: github.com/dbonfigli/sts-phased-rollout-operator
 resources:
 - api:
     crdVersion: v1
@@ -13,7 +13,7 @@ resources:
   controller: true
   domain: sts.plus
   kind: PhasedRollout
-  path: github.com/dbonfigli/sts-plus-operator/api/v1alpha1
+  path: github.com/dbonfigli/sts-phased-rollout-operator/api/v1alpha1
   version: v1alpha1
   webhooks:
     defaulting: true

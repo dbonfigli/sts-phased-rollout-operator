@@ -39,8 +39,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	stsplusv1alpha1 "github.com/dbonfigli/sts-plus-operator/api/v1alpha1"
-	"github.com/dbonfigli/sts-plus-operator/pkg/prometheus"
+	stsplusv1alpha1 "github.com/dbonfigli/sts-phased-rollout-operator/api/v1alpha1"
+	"github.com/dbonfigli/sts-phased-rollout-operator/pkg/prometheus"
 )
 
 const managedByAnnotation = "sts.plus/phasedRollout"
