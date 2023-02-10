@@ -6,8 +6,8 @@ metadata:
     app.kubernetes.io/name: clusterrole
     app.kubernetes.io/instance: phasedrollout-editor-role
     app.kubernetes.io/component: rbac
-    app.kubernetes.io/created-by: sts-plus-operator
-    app.kubernetes.io/part-of: sts-plus-operator
+    app.kubernetes.io/created-by: sts-phased-rollout-operator
+    app.kubernetes.io/part-of: sts-phased-rollout-operator
     app.kubernetes.io/managed-by: kustomize
   name: phasedrollout-editor-role
 rules:

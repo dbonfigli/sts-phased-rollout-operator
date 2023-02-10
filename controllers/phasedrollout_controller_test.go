@@ -40,7 +40,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	stsplusv1alpha1 "github.com/dbonfigli/sts-plus-operator/api/v1alpha1"
+	stsplusv1alpha1 "github.com/dbonfigli/sts-phased-rollout-operator/api/v1alpha1"
 )
 
 var _ = Describe("PhasedRollout controller", func() {

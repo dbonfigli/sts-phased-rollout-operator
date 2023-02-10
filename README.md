@@ -1,11 +1,5 @@
-# sts-plus-operator
-The sts plus operator add features to the standard `StatefulSet` kubernetes resource.
-
-At the moment the only feature added is the rollout in controlled phases.
-
-## Phased Rollout
-
-The `PhasedRollout` custom resource manages the update of statefulsets pods in a controlled fashion, on top of the standard rolling update.
+# sts-phased-rollout-operator
+The sts phased rollout operator manages the update of statefulsets pods in a controlled fashion, on top of the standard rolling update.
 
 During the standard rolling update process, at each pod update, the update process is put on hold until several prometheus checks are performed and only if they are succesful then the rollout  is permitted to continue to the next pod.
 
@@ -32,7 +26,7 @@ Prometheus checks semantic is similar to prometheus alerts: if data is returned 
 
 ### Resource Example
 
-This is an example of `PHasedRollout` resource:
+This is an example of `PhasedRollout` resource:
 
 ```yaml
 apiVersion: sts.plus/v1alpha1
@@ -81,7 +75,7 @@ make install
 
 3. Deploy the controller to the cluster:
 ```sh
-make deploy IMG=dbonfigli/sts-plus-operator:latest
+make deploy IMG=dbonfigli/sts-phased-rollout-operator:latest
 ```
 
 4. Deploy the samples:
