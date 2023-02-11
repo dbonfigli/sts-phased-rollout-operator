@@ -1,3 +1,5 @@
+xxx
+
 # sts-phased-rollout-operator
 The sts phased rollout operator manages the update of statefulsets pods in a controlled fashion, on top of the standard rolling update.
 
