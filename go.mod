@@ -3,8 +3,8 @@ module github.com/dbonfigli/sts-phased-rollout-operator
 go 1.19
 
 require (
-	github.com/onsi/ginkgo/v2 v2.6.0
-	github.com/onsi/gomega v1.24.1
+	github.com/onsi/ginkgo/v2 v2.8.0
+	github.com/onsi/gomega v1.25.0
 	github.com/prometheus/prometheus v0.42.0
 	k8s.io/api v0.26.1
 	k8s.io/apimachinery v0.26.1
