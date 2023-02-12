@@ -39,7 +39,7 @@ jobs:
         with:
           go-version: 1.19
 
-      - name: test
+      - name: Test
         run: make test
 
       - name: Bump version
@@ -50,7 +50,7 @@ jobs:
           fetch_all_tags: true
           dry_run: ${{ ! (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
 
-      - name: Create a GitHub release with automatic tag
+      - name: Create a GitHub release
         uses: ncipollo/release-action@v1
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
