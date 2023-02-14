@@ -173,6 +173,13 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// if no updates needed, set partition to prevent unmanaged future rollouts
 	if sts.Status.CurrentRevision == sts.Status.UpdateRevision {
+		mustReconcile, err := r.preventUncontrolledRollouts(ctx, &sts)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if mustReconcile {
+			return ctrl.Result{}, nil
+		}
 		if phasedRollout.Status.Status != stsplusv1alpha1.PhasedRollotUpdated {
 			log.Info("setting phasedRollout state", "state", stsplusv1alpha1.PhasedRollotUpdated)
 			// if there was an ongoing phased rollout, then it has been completed, set RolloutEndTime and remove RollingPodStatus
@@ -184,13 +191,6 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			phasedRollout.Status.Message = "all pods updated to the current revision"
 			phasedRollout.Status.RollingPodStatus = nil
 			return ctrl.Result{}, r.Status().Update(ctx, &phasedRollout)
-		}
-		mustReconcile, err := r.preventUncontrolledRollouts(ctx, &sts)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		if mustReconcile {
-			return ctrl.Result{}, nil
 		}
 	} else {
 		// need to perform a rollout
