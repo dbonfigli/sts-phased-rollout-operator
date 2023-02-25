@@ -135,8 +135,7 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// check if we should manage the sts
 	okToManage, needReconciliation, err := r.manageSTS(ctx, &sts, &phasedRollout)
-	if err != nil || needReconciliation || !okToManage {
-		// if needReconciliation == true, it means that there has been a change in the sts or phasedRollout so a reconciliation will be in the queue
+	if !okToManage || needReconciliation || err != nil {
 		// if okToManage == false, no need to requeue: a change in the sts (tag removed by the other phased rollout) will trigger a reconciliation
 		return ctrl.Result{}, err
 	}
@@ -174,11 +173,8 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// if no updates needed, set partition to prevent unmanaged future rollouts
 	if sts.Status.CurrentRevision == sts.Status.UpdateRevision {
 		mustReconcile, err := r.preventUncontrolledRollouts(ctx, &sts)
-		if err != nil {
+		if mustReconcile || err != nil {
 			return ctrl.Result{}, err
-		}
-		if mustReconcile {
-			return ctrl.Result{}, nil
 		}
 		if phasedRollout.Status.Status != stsplusv1alpha1.PhasedRollotUpdated {
 			log.Info("setting phasedRollout state", "state", stsplusv1alpha1.PhasedRollotUpdated)
@@ -257,11 +253,8 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 	if phasedRollout.Status.UpdateRevision != sts.Status.UpdateRevision {
 		log.Info("sts updateRevision changed during the rollout, must restart the phased rollout", "stsName", sts.Name)
 		mustReconcile, err := r.preventUncontrolledRollouts(ctx, sts)
-		if err != nil {
+		if mustReconcile || err != nil {
 			return ctrl.Result{}, err
-		}
-		if mustReconcile {
-			return ctrl.Result{}, nil
 		}
 		phasedRollout.Status.UpdateRevision = sts.Status.UpdateRevision
 		phasedRollout.Status.RolloutStartTime = time.Now().Format(time.RFC3339)
@@ -542,7 +535,6 @@ func (r *PhasedRolloutReconciler) manageSTS(ctx context.Context, sts *appsv1.Sta
 		return false, true, r.Status().Update(ctx, phasedRollout)
 	}
 	return false, false, nil
-
 }
 
 func (r *PhasedRolloutReconciler) mapSTSToPhasedRollout(o client.Object) []reconcile.Request {
@@ -569,7 +561,6 @@ func (r *PhasedRolloutReconciler) mapSTSToPhasedRollout(o client.Object) []recon
 		}
 	}
 	return requests
-
 }
 
 func (r *PhasedRolloutReconciler) mapSecretToPhasedRollout(o client.Object) []reconcile.Request {
