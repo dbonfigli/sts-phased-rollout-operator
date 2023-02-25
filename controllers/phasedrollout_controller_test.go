@@ -307,7 +307,13 @@ var _ = Describe("PhasedRollout controller", func() {
 						readSTS.Spec.UpdateStrategy.RollingUpdate != nil &&
 						*readSTS.Spec.UpdateStrategy.RollingUpdate.Partition == 2
 				}, timeout, interval).Should(BeTrue())
-
+				By("Expecting the phasedRollout to have status \"updated\"")
+				Eventually(func() bool {
+					var pr stsplusv1alpha1.PhasedRollout
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
+					return err == nil && pr.Status.Status == stsplusv1alpha1.PhasedRollotUpdated
+				}, timeout, interval).Should(BeTrue())
+				
 				By("Setting PhasedRollout.Spec.StandardRollingUpdate == true")
 				Expect(k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &phasedRollout)).Should(Succeed())
 				phasedRollout.Spec.StandardRollingUpdate = true
