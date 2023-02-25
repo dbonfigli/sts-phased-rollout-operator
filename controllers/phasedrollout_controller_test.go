@@ -313,7 +313,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil && pr.Status.Status == stsplusv1alpha1.PhasedRollotUpdated
 				}, timeout, interval).Should(BeTrue())
-				
+
 				By("Setting PhasedRollout.Spec.StandardRollingUpdate == true")
 				Expect(k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &phasedRollout)).Should(Succeed())
 				phasedRollout.Spec.StandardRollingUpdate = true
