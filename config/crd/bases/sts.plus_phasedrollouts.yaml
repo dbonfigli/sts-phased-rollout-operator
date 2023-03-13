@@ -29,6 +29,9 @@ spec:
     - jsonPath: .status.conditions[?(@.type == 'Ready')].message
       name: message
       type: string
+    - jsonPath: .status.phase
+      name: phase
+      type: string
     - jsonPath: .status.rolloutStartTime
       name: rollout-start-time
       type: date
@@ -194,6 +197,8 @@ spec:
                   - type
                   type: object
                 type: array
+              phase:
+                type: string
               rollingPodStatus:
                 properties:
                   analisysStartTime:

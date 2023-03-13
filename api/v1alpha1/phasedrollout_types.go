@@ -50,6 +50,7 @@ type PhasedRolloutSpec struct {
 // PhasedRolloutStatus defines the observed state of PhasedRollout
 type PhasedRolloutStatus struct {
 	Conditions       []metav1.Condition `json:"conditions,omitempty"`
+	Phase            string             `json:"phase,omitempty"`
 	UpdateRevision   string             `json:"updateRevision,omitempty"`
 	RolloutStartTime string             `json:"rolloutStartTime,omitempty"`
 	RolloutEndTime   string             `json:"rolloutEndTime,omitempty"`
@@ -72,6 +73,7 @@ type RollingPodStatus struct {
 //+kubebuilder:printcolumn:name="ready",type="string",JSONPath=".status.conditions[?(@.type == 'Ready')].status"
 //+kubebuilder:printcolumn:name="reason",type="string",JSONPath=".status.conditions[?(@.type == 'Ready')].reason"
 //+kubebuilder:printcolumn:name="message",type="string",JSONPath=".status.conditions[?(@.type == 'Ready')].message"
+//+kubebuilder:printcolumn:name="phase",type="string",JSONPath=".status.phase"
 //+kubebuilder:printcolumn:name="rollout-start-time",type="date",JSONPath=".status.rolloutStartTime"
 //+kubebuilder:printcolumn:name="rollout-end-time",type="date",JSONPath=".status.rolloutEndTime"
 //+kubebuilder:printcolumn:name="age",type="date",JSONPath=".metadata.creationTimestamp"

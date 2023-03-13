@@ -177,6 +177,7 @@ func (r *PhasedRolloutReconciler) getTargetSTS(ctx context.Context, phasedRollou
 				return nil, &ctrl.Result{}, r.Update(ctx, phasedRollout)
 			}
 			log.V(10).Info("sts no found", "stsName", phasedRollout.Spec.TargetRef)
+			phasedRollout.Status.Phase = stsplusv1alpha1.PhasedRolloutErrorSTSNotFound
 			phasedRollout.GetConditionReady().Status = metav1.ConditionFalse
 			phasedRollout.GetConditionReady().Reason = stsplusv1alpha1.PhasedRolloutErrorSTSNotFound
 			phasedRollout.GetConditionReady().Message = "target sts " + phasedRollout.Spec.TargetRef + "not found in namespace " + phasedRollout.Namespace
@@ -265,10 +266,11 @@ func (r *PhasedRolloutReconciler) manageSTS(ctx context.Context, sts *appsv1.Sta
 
 	// this sts seems to be legitimately managed by another phasedRollout
 	message := "sts is managed by another phasedRollout"
-	if phasedRollout.GetConditionReady().Reason != stsplusv1alpha1.PhasedRolloutErrorCannotManage {
+	if phasedRollout.Status.Phase != stsplusv1alpha1.PhasedRolloutErrorCannotManage {
 		log.Info(message, "stsName", sts.Name, "reportedPhasedRolloutName", reportedPhasedRolloutName)
 		r.Recorder.Eventf(phasedRollout, "Warning", "CannotManage", message)
 	}
+	phasedRollout.Status.Phase = stsplusv1alpha1.PhasedRolloutErrorCannotManage
 	phasedRollout.GetConditionReady().Status = metav1.ConditionFalse
 	phasedRollout.GetConditionReady().Reason = stsplusv1alpha1.PhasedRolloutErrorCannotManage
 	phasedRollout.GetConditionReady().Message = message
@@ -285,10 +287,11 @@ func (r *PhasedRolloutReconciler) checkUpdateStrategy(ctx context.Context, sts *
 
 	if sts.Spec.UpdateStrategy.Type != appsv1.RollingUpdateStatefulSetStrategyType {
 		message := "sts has not RollingUpdate as UpdateStrategy, cannot manage it"
-		if phasedRollout.GetConditionReady().Reason != stsplusv1alpha1.PhasedRolloutErrorCannotManage {
+		if phasedRollout.Status.Phase != stsplusv1alpha1.PhasedRolloutErrorCannotManage {
 			log.Info(message, "stsName", sts.Name, "UpdateStrategy", sts.Spec.UpdateStrategy.Type)
 			r.Recorder.Eventf(phasedRollout, "Warning", "CannotManage", message)
 		}
+		phasedRollout.Status.Phase = stsplusv1alpha1.PhasedRolloutErrorCannotManage
 		phasedRollout.GetConditionReady().Status = metav1.ConditionFalse
 		phasedRollout.GetConditionReady().Reason = stsplusv1alpha1.PhasedRolloutErrorCannotManage
 		phasedRollout.GetConditionReady().Message = message
@@ -312,11 +315,12 @@ func (r *PhasedRolloutReconciler) checkStandardRollingUpdate(ctx context.Context
 			sts.Spec.UpdateStrategy.RollingUpdate.Partition = nil
 			return &ctrl.Result{}, r.Update(ctx, sts)
 		}
-		if phasedRollout.GetConditionReady().Reason != stsplusv1alpha1.PhasedRolloutSuspened {
-			log.Info("setting phasedRollout state", "state", stsplusv1alpha1.PhasedRolloutSuspened)
+		if phasedRollout.Status.Phase != stsplusv1alpha1.PhasedRolloutSuspened {
+			log.Info("setting phasedRollout phase", "phase", stsplusv1alpha1.PhasedRolloutSuspened)
 			r.Recorder.Eventf(phasedRollout, "Normal", "Suspended", message)
 		}
-		phasedRollout.GetConditionReady().Status = metav1.ConditionFalse
+		phasedRollout.Status.Phase = stsplusv1alpha1.PhasedRolloutSuspened
+		phasedRollout.GetConditionReady().Status = metav1.ConditionTrue
 		phasedRollout.GetConditionReady().Reason = stsplusv1alpha1.PhasedRolloutSuspened
 		phasedRollout.GetConditionReady().Message = message
 		return &ctrl.Result{}, nil
@@ -337,14 +341,15 @@ func (r *PhasedRolloutReconciler) checkRollout(ctx context.Context, sts *appsv1.
 		if reconcileResult != nil || err != nil {
 			return reconcileResult, err
 		}
-		if phasedRollout.GetConditionReady().Reason != stsplusv1alpha1.PhasedRolloutUpdated {
-			log.Info("setting phasedRollout state", "state", stsplusv1alpha1.PhasedRolloutUpdated)
+		if phasedRollout.Status.Phase != stsplusv1alpha1.PhasedRolloutUpdated {
+			log.Info("setting phasedRollout phase", "phase", stsplusv1alpha1.PhasedRolloutUpdated)
 			// if there was an ongoing phased rollout, then it has been completed, set RolloutEndTime and remove RollingPodStatus
-			if phasedRollout.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutRolling {
+			if phasedRollout.Status.Phase == stsplusv1alpha1.PhasedRolloutRolling {
 				r.Recorder.Eventf(phasedRollout, "Normal", "RolloutCompleted", "the phased rollout is completed")
 				phasedRollout.Status.RolloutEndTime = time.Now().Format(time.RFC3339)
 			}
 		}
+		phasedRollout.Status.Phase = stsplusv1alpha1.PhasedRolloutUpdated
 		phasedRollout.GetConditionReady().Status = metav1.ConditionTrue
 		phasedRollout.GetConditionReady().Reason = stsplusv1alpha1.PhasedRolloutUpdated
 		phasedRollout.GetConditionReady().Message = "all pods updated to the current revision"
@@ -356,7 +361,7 @@ func (r *PhasedRolloutReconciler) checkRollout(ctx context.Context, sts *appsv1.
 }
 
 // rollout handles the reconciliation during updates.
-// During a rollout, the reconciliation generally cyclses through `phasedRollout.Status.RollingPodStatus.Status` statuses this way:
+// During a rollout, the reconciliation generally cyclses through `phasedRollout.Status.RollingPodStatus.Phase` phases this way:
 //  1. RollingPodWaitForPodToBeUpdated (wait for the pod to the right of the partition to have the current sts revision);
 //  2. RollingPodWaitForAllPodsToBeAvailable (wait for the sts to have all pods available);
 //  3. RollingPodWaitForInitialDelay (wait InitialDelay before starting checks, this help collect proper prometheus metrics before consulting them in checks);
@@ -374,9 +379,10 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 	log.V(10).Info("there is an ongoing rollout")
 
 	// update phasedRollout status to "rolling"
-	if phasedRollout.GetConditionReady().Reason != stsplusv1alpha1.PhasedRolloutRolling {
-		log.Info("setting phasedRollout state", "state", stsplusv1alpha1.PhasedRolloutRolling)
+	if phasedRollout.Status.Phase != stsplusv1alpha1.PhasedRolloutRolling {
+		log.Info("setting phasedRollout phase", "phase", stsplusv1alpha1.PhasedRolloutRolling)
 		r.Recorder.Eventf(phasedRollout, "Normal", "RolloutStarted", "the phased rollout is starting")
+		phasedRollout.Status.Phase = stsplusv1alpha1.PhasedRolloutRolling
 		phasedRollout.GetConditionReady().Status = metav1.ConditionTrue
 		phasedRollout.GetConditionReady().Reason = stsplusv1alpha1.PhasedRolloutRolling
 		phasedRollout.GetConditionReady().Message = "phased rollout started"
@@ -614,7 +620,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 
 	}
 
-	log.Info("phasedRollout status ready reason not recognized, this should never happen", "status", phasedRollout.GetConditionReady().Reason)
+	log.Info("phasedRollout phase not recognized, this should never happen", "phase", phasedRollout.Status.Phase)
 	return nil, nil
 }
 
