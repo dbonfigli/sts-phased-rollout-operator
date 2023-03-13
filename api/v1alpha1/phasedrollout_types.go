@@ -27,11 +27,11 @@ const (
 
 	PhasedRolloutConditionReady = "Ready"
 
-	PhasedRollotErrorCannotManage = "ErrorCannotManage"
-	PhasedRollotErrorSTSNotFound  = "ErrorSTSNotFound"
-	PhasedRollotRolling           = "Rolling"
-	PhasedRollotUpdated           = "Updated"
-	PhasedRollotSuspened          = "Suspended"
+	PhasedRolloutErrorCannotManage = "ErrorCannotManage"
+	PhasedRolloutErrorSTSNotFound  = "ErrorSTSNotFound"
+	PhasedRolloutRolling           = "Rolling"
+	PhasedRolloutUpdated           = "Updated"
+	PhasedRolloutSuspened          = "Suspended"
 
 	RollingPodWaitForPodToBeUpdated       = "WaitForPodToBeUpdated"
 	RollingPodWaitForAllPodsToBeAvailable = "WaitForAllPodsToBeAvailable"
