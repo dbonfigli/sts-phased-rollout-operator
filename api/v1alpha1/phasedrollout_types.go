@@ -55,19 +55,19 @@ type PhasedRolloutStatus struct {
 	Conditions       []metav1.Condition `json:"conditions,omitempty"`
 	Phase            string             `json:"phase,omitempty"`
 	UpdateRevision   string             `json:"updateRevision,omitempty"`
-	RolloutStartTime string             `json:"rolloutStartTime,omitempty"`
-	RolloutEndTime   string             `json:"rolloutEndTime,omitempty"`
+	RolloutStartTime metav1.Time        `json:"rolloutStartTime,omitempty"`
+	RolloutEndTime   metav1.Time        `json:"rolloutEndTime,omitempty"`
 	RollingPodStatus *RollingPodStatus  `json:"rollingPodStatus,omitempty"`
 }
 
 type RollingPodStatus struct {
-	Status                      string `json:"status,omitempty"`
-	Partition                   int32  `json:"partition"`
-	AnalisysStartTime           string `json:"analisysStartTime,omitempty"`
-	LastCheckTime               string `json:"lastCheckTime,omitempty"`
-	ConsecutiveSuccessfulChecks int32  `json:"consecutiveSuccessfulChecks"`
-	ConsecutiveFailedChecks     int32  `json:"consecutiveFailedChecks"`
-	TotalFailedChecks           int32  `json:"totalFailedChecks"`
+	Status                      string      `json:"status,omitempty"`
+	Partition                   int32       `json:"partition"`
+	AnalisysStartTime           metav1.Time `json:"analisysStartTime,omitempty"`
+	LastCheckTime               metav1.Time `json:"lastCheckTime,omitempty"`
+	ConsecutiveSuccessfulChecks int32       `json:"consecutiveSuccessfulChecks"`
+	ConsecutiveFailedChecks     int32       `json:"consecutiveFailedChecks"`
+	TotalFailedChecks           int32       `json:"totalFailedChecks"`
 }
 
 //+kubebuilder:object:root=true

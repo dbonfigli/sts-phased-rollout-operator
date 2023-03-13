@@ -339,7 +339,7 @@ func (r *PhasedRolloutReconciler) checkRollout(ctx context.Context, sts *appsv1.
 			// if there was an ongoing phased rollout, then it has been completed, set RolloutEndTime and remove RollingPodStatus
 			if phasedRollout.Status.Phase == stsplusv1alpha1.PhasedRolloutRolling {
 				r.Recorder.Eventf(phasedRollout, "Normal", "RolloutCompleted", "the phased rollout is completed")
-				phasedRollout.Status.RolloutEndTime = time.Now().Format(time.RFC3339)
+				phasedRollout.Status.RolloutEndTime = metav1.Now()
 			}
 		}
 		phasedRollout.Status.Phase = stsplusv1alpha1.PhasedRolloutUpdated
@@ -376,8 +376,8 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 		phasedRollout.Status.Phase = stsplusv1alpha1.PhasedRolloutRolling
 		phasedRollout.SetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated, metav1.ConditionFalse, stsplusv1alpha1.PhasedRolloutRolling, "phased rollout in progress")
 		phasedRollout.Status.UpdateRevision = sts.Status.UpdateRevision
-		phasedRollout.Status.RolloutStartTime = time.Now().Format(time.RFC3339)
-		phasedRollout.Status.RolloutEndTime = ""
+		phasedRollout.Status.RolloutStartTime = metav1.Now()
+		phasedRollout.Status.RolloutEndTime = metav1.Time{}
 		phasedRollout.Status.RollingPodStatus = nil
 		return &ctrl.Result{}, nil
 	}
@@ -390,8 +390,8 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			return reconcileResult, err
 		}
 		phasedRollout.Status.UpdateRevision = sts.Status.UpdateRevision
-		phasedRollout.Status.RolloutStartTime = time.Now().Format(time.RFC3339)
-		phasedRollout.Status.RolloutEndTime = ""
+		phasedRollout.Status.RolloutStartTime = metav1.Now()
+		phasedRollout.Status.RolloutEndTime = metav1.Time{}
 		phasedRollout.Status.RollingPodStatus = nil
 		return &ctrl.Result{}, nil
 	}
@@ -422,8 +422,8 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 		if phasedRollout.Status.RollingPodStatus.Partition >= *sts.Spec.Replicas {
 			// no pods to the right of the partition, set status to the next step
 			phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodWaitForAllPodsToBeAvailable
-			phasedRollout.Status.RollingPodStatus.AnalisysStartTime = ""
-			phasedRollout.Status.RollingPodStatus.LastCheckTime = ""
+			phasedRollout.Status.RollingPodStatus.AnalisysStartTime = metav1.Time{}
+			phasedRollout.Status.RollingPodStatus.LastCheckTime = metav1.Time{}
 			phasedRollout.Status.RollingPodStatus.ConsecutiveSuccessfulChecks = 0
 			phasedRollout.Status.RollingPodStatus.ConsecutiveFailedChecks = 0
 			phasedRollout.Status.RollingPodStatus.TotalFailedChecks = 0
@@ -456,8 +456,8 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 		}
 		log.Info("pod is updated to sts UpdateRevision, setting RollingPodStatus for next step", "pod", podName, "rollingPodStatus", stsplusv1alpha1.RollingPodWaitForAllPodsToBeAvailable)
 		phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodWaitForAllPodsToBeAvailable
-		phasedRollout.Status.RollingPodStatus.AnalisysStartTime = ""
-		phasedRollout.Status.RollingPodStatus.LastCheckTime = ""
+		phasedRollout.Status.RollingPodStatus.AnalisysStartTime = metav1.Time{}
+		phasedRollout.Status.RollingPodStatus.LastCheckTime = metav1.Time{}
 		phasedRollout.Status.RollingPodStatus.ConsecutiveSuccessfulChecks = 0
 		phasedRollout.Status.RollingPodStatus.ConsecutiveFailedChecks = 0
 		phasedRollout.Status.RollingPodStatus.TotalFailedChecks = 0
@@ -477,8 +477,8 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 		}
 		log.Info("all pods available for the sts, setting RollingPodStatus for next step", "stsName", sts.Name, "RollingPodStatus", stsplusv1alpha1.RollingPodWaitForInitialDelay)
 		phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodWaitForInitialDelay
-		phasedRollout.Status.RollingPodStatus.AnalisysStartTime = time.Now().Format(time.RFC3339)
-		phasedRollout.Status.RollingPodStatus.LastCheckTime = ""
+		phasedRollout.Status.RollingPodStatus.AnalisysStartTime = metav1.Now()
+		phasedRollout.Status.RollingPodStatus.LastCheckTime = metav1.Time{}
 		phasedRollout.Status.RollingPodStatus.ConsecutiveSuccessfulChecks = 0
 		phasedRollout.Status.RollingPodStatus.ConsecutiveFailedChecks = 0
 		phasedRollout.Status.RollingPodStatus.TotalFailedChecks = 0
@@ -487,18 +487,12 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 
 	// if status is RollingPodWaitForInitialDelay wait initialDelay before starting checks
 	if phasedRollout.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForInitialDelay {
-		analisysStartTime, err := time.Parse(time.RFC3339, phasedRollout.Status.RollingPodStatus.AnalisysStartTime)
-		if err != nil {
-			log.Error(err, "unable to parse phasedRollout.Status.RollingPodStatus.AnalisysStartTime")
-			// go back to a good status
-			phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodWaitForAllPodsToBeAvailable
-			return &ctrl.Result{}, nil
-		}
+		analisysStartTime := phasedRollout.Status.RollingPodStatus.AnalisysStartTime
 		initialDelayEndTime := analisysStartTime.Add(time.Second * time.Duration(phasedRollout.Spec.Check.InitialDelaySeconds))
 		if time.Now().After(initialDelayEndTime) {
 			log.Info("we are past the initial delay to roll a pod, setting RollingPodStatus for next step", "stsName", sts.Name, "RollingPodStatus", stsplusv1alpha1.RollingPodWaitForChecks)
 			phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodWaitForChecks
-			phasedRollout.Status.RollingPodStatus.LastCheckTime = ""
+			phasedRollout.Status.RollingPodStatus.LastCheckTime = metav1.Time{}
 			phasedRollout.Status.RollingPodStatus.ConsecutiveSuccessfulChecks = 0
 			phasedRollout.Status.RollingPodStatus.ConsecutiveFailedChecks = 0
 			phasedRollout.Status.RollingPodStatus.TotalFailedChecks = 0
@@ -525,14 +519,8 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			return &ctrl.Result{}, r.Update(ctx, sts)
 		}
 
-		if phasedRollout.Status.RollingPodStatus.LastCheckTime != "" {
-			lastCheckTime, err := time.Parse(time.RFC3339, phasedRollout.Status.RollingPodStatus.LastCheckTime)
-			if err != nil {
-				log.Error(err, "unable to parse phasedRollout.Status.RollingPodStatus.LastCheckTime")
-				// go back to a good status
-				phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodWaitForAllPodsToBeAvailable
-				return &ctrl.Result{}, nil
-			}
+		if phasedRollout.Status.RollingPodStatus.LastCheckTime != (metav1.Time{}) {
+			lastCheckTime := phasedRollout.Status.RollingPodStatus.LastCheckTime
 			nextCheckTime := lastCheckTime.Add(time.Second * time.Duration(phasedRollout.Spec.Check.PeriodSeconds))
 			if !time.Now().After(nextCheckTime) {
 				log.V(10).Info("we must still wait before performing a new check")
@@ -595,7 +583,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			return &ctrl.Result{RequeueAfter: time.Duration(r.RetryWaitSeconds) * time.Second}, nil //TODO instead of waiting an arbitrary time we should do retries with backoff
 		}
 		phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodWaitForChecks
-		phasedRollout.Status.RollingPodStatus.LastCheckTime = time.Now().Format(time.RFC3339)
+		phasedRollout.Status.RollingPodStatus.LastCheckTime = metav1.Now()
 		if checkResult {
 			phasedRollout.Status.RollingPodStatus.ConsecutiveSuccessfulChecks += 1
 			phasedRollout.Status.RollingPodStatus.ConsecutiveFailedChecks = 0

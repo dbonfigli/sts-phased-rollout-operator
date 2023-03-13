@@ -193,6 +193,7 @@ spec:
               rollingPodStatus:
                 properties:
                   analisysStartTime:
+                    format: date-time
                     type: string
                   consecutiveFailedChecks:
                     format: int32
@@ -201,6 +202,7 @@ spec:
                     format: int32
                     type: integer
                   lastCheckTime:
+                    format: date-time
                     type: string
                   partition:
                     format: int32
@@ -217,8 +219,10 @@ spec:
                 - totalFailedChecks
                 type: object
               rolloutEndTime:
+                format: date-time
                 type: string
               rolloutStartTime:
+                format: date-time
                 type: string
               updateRevision:
                 type: string
