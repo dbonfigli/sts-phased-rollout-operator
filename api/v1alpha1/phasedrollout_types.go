@@ -21,10 +21,6 @@ import (
 )
 
 const (
-	ConditionStatusUnknown = "Unknown"
-	ConditionStatusTrue    = "True"
-	ConditionStatusFalse   = "False"
-
 	PhasedRolloutConditionReady = "Ready"
 
 	PhasedRolloutErrorCannotManage = "ErrorCannotManage"
@@ -165,7 +161,7 @@ func (p *PhasedRollout) GetConditionReady() *metav1.Condition {
 	}
 	p.Status.Conditions = append(p.Status.Conditions, metav1.Condition{
 		Type:   PhasedRolloutConditionReady,
-		Status: ConditionStatusUnknown,
+		Status: metav1.ConditionUnknown,
 	})
 	return &p.Status.Conditions[len(p.Status.Conditions)-1]
 }

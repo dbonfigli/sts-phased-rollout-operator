@@ -177,7 +177,7 @@ func (r *PhasedRolloutReconciler) getTargetSTS(ctx context.Context, phasedRollou
 				return nil, &ctrl.Result{}, r.Update(ctx, phasedRollout)
 			}
 			log.V(10).Info("sts no found", "stsName", phasedRollout.Spec.TargetRef)
-			phasedRollout.GetConditionReady().Status = stsplusv1alpha1.ConditionStatusFalse
+			phasedRollout.GetConditionReady().Status = metav1.ConditionFalse
 			phasedRollout.GetConditionReady().Reason = stsplusv1alpha1.PhasedRolloutErrorSTSNotFound
 			phasedRollout.GetConditionReady().Message = "target sts " + phasedRollout.Spec.TargetRef + "not found in namespace " + phasedRollout.Namespace
 			// stop the reconciliation loop. The indexer will trigger a reconciliation when the sts will be created
@@ -269,7 +269,7 @@ func (r *PhasedRolloutReconciler) manageSTS(ctx context.Context, sts *appsv1.Sta
 		log.Info(message, "stsName", sts.Name, "reportedPhasedRolloutName", reportedPhasedRolloutName)
 		r.Recorder.Eventf(phasedRollout, "Warning", "CannotManage", message)
 	}
-	phasedRollout.GetConditionReady().Status = stsplusv1alpha1.ConditionStatusFalse
+	phasedRollout.GetConditionReady().Status = metav1.ConditionFalse
 	phasedRollout.GetConditionReady().Reason = stsplusv1alpha1.PhasedRolloutErrorCannotManage
 	phasedRollout.GetConditionReady().Message = message
 	// stop reconciliation loop, we cannot manage this sts
@@ -289,7 +289,7 @@ func (r *PhasedRolloutReconciler) checkUpdateStrategy(ctx context.Context, sts *
 			log.Info(message, "stsName", sts.Name, "UpdateStrategy", sts.Spec.UpdateStrategy.Type)
 			r.Recorder.Eventf(phasedRollout, "Warning", "CannotManage", message)
 		}
-		phasedRollout.GetConditionReady().Status = stsplusv1alpha1.ConditionStatusFalse
+		phasedRollout.GetConditionReady().Status = metav1.ConditionFalse
 		phasedRollout.GetConditionReady().Reason = stsplusv1alpha1.PhasedRolloutErrorCannotManage
 		phasedRollout.GetConditionReady().Message = message
 		return &ctrl.Result{}, nil
@@ -316,7 +316,7 @@ func (r *PhasedRolloutReconciler) checkStandardRollingUpdate(ctx context.Context
 			log.Info("setting phasedRollout state", "state", stsplusv1alpha1.PhasedRolloutSuspened)
 			r.Recorder.Eventf(phasedRollout, "Normal", "Suspended", message)
 		}
-		phasedRollout.GetConditionReady().Status = stsplusv1alpha1.ConditionStatusFalse
+		phasedRollout.GetConditionReady().Status = metav1.ConditionFalse
 		phasedRollout.GetConditionReady().Reason = stsplusv1alpha1.PhasedRolloutSuspened
 		phasedRollout.GetConditionReady().Message = message
 		return &ctrl.Result{}, nil
@@ -345,7 +345,7 @@ func (r *PhasedRolloutReconciler) checkRollout(ctx context.Context, sts *appsv1.
 				phasedRollout.Status.RolloutEndTime = time.Now().Format(time.RFC3339)
 			}
 		}
-		phasedRollout.GetConditionReady().Status = stsplusv1alpha1.ConditionStatusTrue
+		phasedRollout.GetConditionReady().Status = metav1.ConditionTrue
 		phasedRollout.GetConditionReady().Reason = stsplusv1alpha1.PhasedRolloutUpdated
 		phasedRollout.GetConditionReady().Message = "all pods updated to the current revision"
 		phasedRollout.Status.RollingPodStatus = nil
@@ -377,7 +377,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 	if phasedRollout.GetConditionReady().Reason != stsplusv1alpha1.PhasedRolloutRolling {
 		log.Info("setting phasedRollout state", "state", stsplusv1alpha1.PhasedRolloutRolling)
 		r.Recorder.Eventf(phasedRollout, "Normal", "RolloutStarted", "the phased rollout is starting")
-		phasedRollout.GetConditionReady().Status = stsplusv1alpha1.ConditionStatusTrue
+		phasedRollout.GetConditionReady().Status = metav1.ConditionTrue
 		phasedRollout.GetConditionReady().Reason = stsplusv1alpha1.PhasedRolloutRolling
 		phasedRollout.GetConditionReady().Message = "phased rollout started"
 		phasedRollout.Status.UpdateRevision = sts.Status.UpdateRevision

@@ -135,7 +135,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
-						pr.GetConditionReady().Status == stsplusv1alpha1.ConditionStatusFalse &&
+						pr.GetConditionReady().Status == metav1.ConditionFalse &&
 						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutErrorSTSNotFound
 				}, timeout, interval).Should(BeTrue())
 			})
@@ -159,7 +159,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
-						pr.GetConditionReady().Status == stsplusv1alpha1.ConditionStatusFalse &&
+						pr.GetConditionReady().Status == metav1.ConditionFalse &&
 						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutErrorCannotManage
 				}, timeout, interval).Should(BeTrue())
 			})
@@ -280,7 +280,7 @@ var _ = Describe("PhasedRollout controller", func() {
 						var pr stsplusv1alpha1.PhasedRollout
 						err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: otherPhasedRollout.Name}, &pr)
 						return err == nil &&
-							pr.GetConditionReady().Status == stsplusv1alpha1.ConditionStatusFalse &&
+							pr.GetConditionReady().Status == metav1.ConditionFalse &&
 							pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutErrorCannotManage
 					}, timeout, interval).Should(BeTrue())
 				})
@@ -318,7 +318,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
-						pr.GetConditionReady().Status == stsplusv1alpha1.ConditionStatusTrue &&
+						pr.GetConditionReady().Status == metav1.ConditionTrue &&
 						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutUpdated
 				}, timeout, interval).Should(BeTrue())
 
@@ -332,7 +332,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
-						pr.GetConditionReady().Status == stsplusv1alpha1.ConditionStatusFalse &&
+						pr.GetConditionReady().Status == metav1.ConditionFalse &&
 						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutSuspened
 				}, timeout, interval).Should(BeTrue())
 
@@ -455,7 +455,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
-						pr.GetConditionReady().Status == stsplusv1alpha1.ConditionStatusTrue &&
+						pr.GetConditionReady().Status == metav1.ConditionTrue &&
 						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutUpdated
 				}, timeout, interval).Should(BeTrue())
 
@@ -469,7 +469,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
-						pr.GetConditionReady().Status == stsplusv1alpha1.ConditionStatusTrue &&
+						pr.GetConditionReady().Status == metav1.ConditionTrue &&
 						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.UpdateRevision == "web-0000000001" &&
 						pr.Status.RollingPodStatus != nil &&
@@ -482,7 +482,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
-						pr.GetConditionReady().Status == stsplusv1alpha1.ConditionStatusTrue &&
+						pr.GetConditionReady().Status == metav1.ConditionTrue &&
 						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.UpdateRevision == "web-0000000001" &&
 						pr.Status.RollingPodStatus != nil &&
@@ -510,7 +510,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
-						pr.GetConditionReady().Status == stsplusv1alpha1.ConditionStatusTrue &&
+						pr.GetConditionReady().Status == metav1.ConditionTrue &&
 						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.UpdateRevision == "web-0000000001" &&
 						pr.Status.RollingPodStatus != nil &&
@@ -523,7 +523,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
-						pr.GetConditionReady().Status == stsplusv1alpha1.ConditionStatusTrue &&
+						pr.GetConditionReady().Status == metav1.ConditionTrue &&
 						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.UpdateRevision == "web-0000000001" &&
 						pr.Status.RollingPodStatus != nil &&
@@ -554,7 +554,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
-						pr.GetConditionReady().Status == stsplusv1alpha1.ConditionStatusTrue &&
+						pr.GetConditionReady().Status == metav1.ConditionTrue &&
 						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForAllPodsToBeAvailable
@@ -571,7 +571,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
-						pr.GetConditionReady().Status == stsplusv1alpha1.ConditionStatusTrue &&
+						pr.GetConditionReady().Status == metav1.ConditionTrue &&
 						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForInitialDelay &&
@@ -583,7 +583,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
-						pr.GetConditionReady().Status == stsplusv1alpha1.ConditionStatusTrue &&
+						pr.GetConditionReady().Status == metav1.ConditionTrue &&
 						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForChecks
 				}, (checkInitialDelaySeconds+timeout)*time.Second, interval).Should(BeTrue())
@@ -594,7 +594,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
-						pr.GetConditionReady().Status == stsplusv1alpha1.ConditionStatusTrue &&
+						pr.GetConditionReady().Status == metav1.ConditionTrue &&
 						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodPrometheusError
@@ -607,7 +607,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
-						pr.GetConditionReady().Status == stsplusv1alpha1.ConditionStatusTrue &&
+						pr.GetConditionReady().Status == metav1.ConditionTrue &&
 						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForChecks &&
