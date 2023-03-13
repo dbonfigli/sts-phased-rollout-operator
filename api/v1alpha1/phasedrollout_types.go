@@ -21,13 +21,16 @@ import (
 )
 
 const (
-	PhasedRolloutConditionReady = "Ready"
+	PhasedRolloutConditionReady   = "Ready"
+	PhasedRolloutConditionUpdated = "Updated"
 
 	PhasedRolloutErrorCannotManage = "ErrorCannotManage"
 	PhasedRolloutErrorSTSNotFound  = "ErrorSTSNotFound"
-	PhasedRolloutRolling           = "Rolling"
-	PhasedRolloutUpdated           = "Updated"
 	PhasedRolloutSuspened          = "Suspended"
+	PhasedRolloutReady             = "Ready"
+
+	PhasedRolloutRolling = "Rolling"
+	PhasedRolloutUpdated = "Updated"
 
 	RollingPodWaitForPodToBeUpdated       = "WaitForPodToBeUpdated"
 	RollingPodWaitForAllPodsToBeAvailable = "WaitForAllPodsToBeAvailable"
@@ -70,9 +73,6 @@ type RollingPodStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="target-ref",type="string",JSONPath=".spec.targetRef",description="target statefulset name"
-//+kubebuilder:printcolumn:name="ready",type="string",JSONPath=".status.conditions[?(@.type == 'Ready')].status"
-//+kubebuilder:printcolumn:name="reason",type="string",JSONPath=".status.conditions[?(@.type == 'Ready')].reason"
-//+kubebuilder:printcolumn:name="message",type="string",JSONPath=".status.conditions[?(@.type == 'Ready')].message"
 //+kubebuilder:printcolumn:name="phase",type="string",JSONPath=".status.phase"
 //+kubebuilder:printcolumn:name="rollout-start-time",type="date",JSONPath=".status.rolloutStartTime"
 //+kubebuilder:printcolumn:name="rollout-end-time",type="date",JSONPath=".status.rolloutEndTime"
@@ -150,11 +150,11 @@ type PrometheusQuery struct {
 	SecretRef string `json:"secretRef,omitempty"`
 }
 
-// GetConditionReady returns the status condition of type "ready" or creates one if it does not exsist
+// GetConditionReady returns the status condition of defined type or creates one if it does not exsist
 // the returned condition is the actualy entry in the PhasedRollout, not a copy
-func (p *PhasedRollout) GetConditionReady() *metav1.Condition {
+func (p *PhasedRollout) GetCondition(conditionType string) *metav1.Condition {
 	for i := range p.Status.Conditions {
-		if p.Status.Conditions[i].Type == PhasedRolloutConditionReady {
+		if p.Status.Conditions[i].Type == conditionType {
 			return &p.Status.Conditions[i]
 		}
 	}
@@ -162,8 +162,31 @@ func (p *PhasedRollout) GetConditionReady() *metav1.Condition {
 		p.Status.Conditions = make([]metav1.Condition, 0)
 	}
 	p.Status.Conditions = append(p.Status.Conditions, metav1.Condition{
-		Type:   PhasedRolloutConditionReady,
+		Type:   conditionType,
 		Status: metav1.ConditionUnknown,
 	})
 	return &p.Status.Conditions[len(p.Status.Conditions)-1]
+}
+
+func (p *PhasedRollout) SetCondition(conditionType string, status metav1.ConditionStatus, reason, message string) {
+	var c *metav1.Condition
+	if p.Status.Conditions == nil {
+		p.Status.Conditions = make([]metav1.Condition, 0)
+	}
+	for i := range p.Status.Conditions {
+		if p.Status.Conditions[i].Type == conditionType {
+			c = &p.Status.Conditions[i]
+		}
+	}
+	if c == nil {
+		p.Status.Conditions = append(p.Status.Conditions, metav1.Condition{Type: conditionType})
+		c = &p.Status.Conditions[len(p.Status.Conditions)-1]
+	}
+	if c.Status != status {
+		c.LastTransitionTime = metav1.Now()
+	}
+	c.Status = status
+	c.Reason = reason
+	c.Message = message
+	c.ObservedGeneration = p.GetGeneration()
 }

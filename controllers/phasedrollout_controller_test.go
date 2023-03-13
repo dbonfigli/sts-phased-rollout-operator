@@ -125,7 +125,7 @@ var _ = Describe("PhasedRollout controller", func() {
 		})
 
 		Context("When the spec respects the constraints", func() {
-			It("Should create the PhasedRollout with status.phase errorSTSNotFound", func() {
+			It("Should create the PhasedRollout with status.phase PhasedRolloutErrorSTSNotFound", func() {
 
 				By("Creating the PhasedRollout")
 				phasedRollout := phasedRolloutTemplate
@@ -136,14 +136,16 @@ var _ = Describe("PhasedRollout controller", func() {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
 						pr.Status.Phase == stsplusv1alpha1.PhasedRolloutErrorSTSNotFound &&
-						pr.GetConditionReady().Status == metav1.ConditionFalse &&
-						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutErrorSTSNotFound
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Status == metav1.ConditionFalse &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Reason == stsplusv1alpha1.PhasedRolloutErrorSTSNotFound &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionUnknown &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutErrorSTSNotFound
 				}, timeout, interval).Should(BeTrue())
 			})
 		})
 
 		Context("When the sts has not UpdateStrategy rolling update", func() {
-			It("Should create the PhasedRollout with status.phase errorCannotManage", func() {
+			It("Should create the PhasedRollout with status.phase PhasedRolloutErrorCannotManage", func() {
 
 				By("Creating the sts")
 				sts := stsTemplate
@@ -161,8 +163,10 @@ var _ = Describe("PhasedRollout controller", func() {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
 						pr.Status.Phase == stsplusv1alpha1.PhasedRolloutErrorCannotManage &&
-						pr.GetConditionReady().Status == metav1.ConditionFalse &&
-						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutErrorCannotManage
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Status == metav1.ConditionFalse &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Reason == stsplusv1alpha1.PhasedRolloutErrorCannotManage &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionUnknown &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutErrorCannotManage
 				}, timeout, interval).Should(BeTrue())
 			})
 		})
@@ -277,14 +281,16 @@ var _ = Describe("PhasedRollout controller", func() {
 					otherPhasedRollout.Spec.TargetRef = sts.Name
 					Expect(k8sClient.Create(context.Background(), &otherPhasedRollout)).Should(Succeed())
 
-					By("Expecting the other phasedRollout to have status.phase \"errorCannotManage\"")
+					By("Expecting the other phasedRollout to have status.phase PhasedRolloutErrorCannotManage")
 					Eventually(func() bool {
 						var pr stsplusv1alpha1.PhasedRollout
 						err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: otherPhasedRollout.Name}, &pr)
 						return err == nil &&
 							pr.Status.Phase == stsplusv1alpha1.PhasedRolloutErrorCannotManage &&
-							pr.GetConditionReady().Status == metav1.ConditionFalse &&
-							pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutErrorCannotManage
+							pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Status == metav1.ConditionFalse &&
+							pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Reason == stsplusv1alpha1.PhasedRolloutErrorCannotManage &&
+							pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionUnknown &&
+							pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutErrorCannotManage
 					}, timeout, interval).Should(BeTrue())
 				})
 			})
@@ -316,14 +322,16 @@ var _ = Describe("PhasedRollout controller", func() {
 						readSTS.Spec.UpdateStrategy.RollingUpdate != nil &&
 						*readSTS.Spec.UpdateStrategy.RollingUpdate.Partition == 2
 				}, timeout, interval).Should(BeTrue())
-				By("Expecting the phasedRollout to have status.phase \"updated\"")
+				By("Expecting the phasedRollout to have status.phase PhasedRolloutUpdated")
 				Eventually(func() bool {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
 						pr.Status.Phase == stsplusv1alpha1.PhasedRolloutUpdated &&
-						pr.GetConditionReady().Status == metav1.ConditionTrue &&
-						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutUpdated
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Status == metav1.ConditionTrue &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Reason == stsplusv1alpha1.PhasedRolloutReady &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionTrue &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutUpdated
 				}, timeout, interval).Should(BeTrue())
 
 				By("Setting PhasedRollout.Spec.StandardRollingUpdate == true")
@@ -331,14 +339,16 @@ var _ = Describe("PhasedRollout controller", func() {
 				phasedRollout.Spec.StandardRollingUpdate = true
 				Expect(k8sClient.Update(context.Background(), &phasedRollout)).Should(Succeed())
 
-				By("Expecting the phasedRollout to have status.phase \"suspended\"")
+				By("Expecting the phasedRollout to have status.phase PhasedRolloutSuspened")
 				Eventually(func() bool {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
 						pr.Status.Phase == stsplusv1alpha1.PhasedRolloutSuspened &&
-						pr.GetConditionReady().Status == metav1.ConditionTrue &&
-						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutSuspened
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Status == metav1.ConditionTrue &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Reason == stsplusv1alpha1.PhasedRolloutSuspened &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionUnknown &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutSuspened
 				}, timeout, interval).Should(BeTrue())
 
 				By("Expecting the sts to have UpdateStrategy.RollingUpdate.Partition == 0")
@@ -455,14 +465,16 @@ var _ = Describe("PhasedRollout controller", func() {
 				phasedRollout.Spec.Check.Query.SecretRef = "prom-secret"
 				Expect(k8sClient.Create(context.Background(), &phasedRollout)).Should(Succeed())
 
-				By("Expecting the phasedRollout to have status.phase \"updated\"")
+				By("Expecting the phasedRollout to have status.phase PhasedRolloutUpdated")
 				Eventually(func() bool {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
 						pr.Status.Phase == stsplusv1alpha1.PhasedRolloutUpdated &&
-						pr.GetConditionReady().Status == metav1.ConditionTrue &&
-						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutUpdated
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Status == metav1.ConditionTrue &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Reason == stsplusv1alpha1.PhasedRolloutReady &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionTrue &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutUpdated
 				}, timeout, interval).Should(BeTrue())
 
 				By("Updating the sts revision to a new one")
@@ -470,28 +482,32 @@ var _ = Describe("PhasedRollout controller", func() {
 				sts.Status.UpdateRevision = "web-0000000001"
 				Expect(k8sClient.Status().Update(context.Background(), &sts)).Should(Succeed())
 
-				By("Expecting the phasedRollout to have the correct status (status ready reason == \"rolling\", RollingPodStatus.Status == \"waitForInitialDelay\", RollingPodStatus.Partition == 2")
+				By("Expecting the phasedRollout to have the correct status (status.phase == PhasedRolloutRolling, RollingPodStatus.Status == RollingPodWaitForInitialDelay, RollingPodStatus.Partition == 2")
 				Eventually(func() bool {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
 						pr.Status.Phase == stsplusv1alpha1.PhasedRolloutRolling &&
-						pr.GetConditionReady().Status == metav1.ConditionTrue &&
-						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutRolling &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Status == metav1.ConditionTrue &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Reason == stsplusv1alpha1.PhasedRolloutReady &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionFalse &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.UpdateRevision == "web-0000000001" &&
 						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForInitialDelay &&
 						pr.Status.RollingPodStatus.Partition == 2
 				}, timeout, interval).Should(BeTrue())
 
-				By("Status.RollingPodStatus.Status should be prometheusError")
+				By("Status.RollingPodStatus.Status should be RollingPodPrometheusError")
 				Eventually(func() bool {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
 						pr.Status.Phase == stsplusv1alpha1.PhasedRolloutRolling &&
-						pr.GetConditionReady().Status == metav1.ConditionTrue &&
-						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutRolling &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Status == metav1.ConditionTrue &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Reason == stsplusv1alpha1.PhasedRolloutReady &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionFalse &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.UpdateRevision == "web-0000000001" &&
 						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodPrometheusError
@@ -519,22 +535,26 @@ var _ = Describe("PhasedRollout controller", func() {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
 						pr.Status.Phase == stsplusv1alpha1.PhasedRolloutRolling &&
-						pr.GetConditionReady().Status == metav1.ConditionTrue &&
-						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutRolling &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Status == metav1.ConditionTrue &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Reason == stsplusv1alpha1.PhasedRolloutReady &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionFalse &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.UpdateRevision == "web-0000000001" &&
 						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForChecks &&
 						pr.Status.RollingPodStatus.ConsecutiveSuccessfulChecks == 1
 				}, time.Duration(checkPeriodSeconds*2)*time.Second, interval).Should(BeTrue())
 
-				By("after 2 consecutiveSuccessfulChecks status should be \"waitForPodToBeUpdated\"")
+				By("after 2 consecutiveSuccessfulChecks Status.RollingPodStatus.Status should be RollingPodWaitForPodToBeUpdated")
 				Eventually(func() bool {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
 						pr.Status.Phase == stsplusv1alpha1.PhasedRolloutRolling &&
-						pr.GetConditionReady().Status == metav1.ConditionTrue &&
-						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutRolling &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Status == metav1.ConditionTrue &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Reason == stsplusv1alpha1.PhasedRolloutReady &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionFalse &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.UpdateRevision == "web-0000000001" &&
 						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForPodToBeUpdated
@@ -559,14 +579,16 @@ var _ = Describe("PhasedRollout controller", func() {
 				pod.Labels["controller-revision-hash"] = "web-0000000001"
 				Expect(k8sClient.Update(context.Background(), &pod)).Should(Succeed())
 
-				By("status should be status should be \"WaitForAllPodsToBeAvailable\"")
+				By("Status.RollingPodStatus.Status should be status should be RollingPodWaitForAllPodsToBeAvailable")
 				Eventually(func() bool {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
 						pr.Status.Phase == stsplusv1alpha1.PhasedRolloutRolling &&
-						pr.GetConditionReady().Status == metav1.ConditionTrue &&
-						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutRolling &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Status == metav1.ConditionTrue &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Reason == stsplusv1alpha1.PhasedRolloutReady &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionFalse &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForAllPodsToBeAvailable
 				}, timeout, interval).Should(BeTrue())
@@ -577,39 +599,45 @@ var _ = Describe("PhasedRollout controller", func() {
 				sts.Status.AvailableReplicas = 2
 				Expect(k8sClient.Status().Update(context.Background(), &sts)).Should(Succeed())
 
-				By("status should be \"RollingPodWaitForInitialDelay\"")
+				By("Status.RollingPodStatus.Status should be RollingPodWaitForInitialDelay")
 				Eventually(func() bool {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
 						pr.Status.Phase == stsplusv1alpha1.PhasedRolloutRolling &&
-						pr.GetConditionReady().Status == metav1.ConditionTrue &&
-						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutRolling &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Status == metav1.ConditionTrue &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Reason == stsplusv1alpha1.PhasedRolloutReady &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionFalse &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForInitialDelay &&
 						pr.Status.RollingPodStatus.Partition == 1
 				}, timeout, interval).Should(BeTrue())
 
-				By("status should be \"RollingPodWaitForChecks\"")
+				By("Status.RollingPodStatus.Status should be RollingPodWaitForChecks")
 				Eventually(func() bool {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
 						pr.Status.Phase == stsplusv1alpha1.PhasedRolloutRolling &&
-						pr.GetConditionReady().Status == metav1.ConditionTrue &&
-						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutRolling &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Status == metav1.ConditionTrue &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Reason == stsplusv1alpha1.PhasedRolloutReady &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionFalse &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForChecks
 				}, (checkInitialDelaySeconds+timeout)*time.Second, interval).Should(BeTrue())
 
-				By("on prometheus errors status should be \"prometheusError\"")
+				By("on prometheus errors Status.RollingPodStatus.Status should be RollingPodPrometheusError")
 				fakePrometheusServer.shouldReturnError = true
 				Eventually(func() bool {
 					var pr stsplusv1alpha1.PhasedRollout
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
 						pr.Status.Phase == stsplusv1alpha1.PhasedRolloutRolling &&
-						pr.GetConditionReady().Status == metav1.ConditionTrue &&
-						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutRolling &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Status == metav1.ConditionTrue &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Reason == stsplusv1alpha1.PhasedRolloutReady &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionFalse &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodPrometheusError
 				}, time.Duration(checkPeriodSeconds*2)*time.Second, interval).Should(BeTrue())
@@ -622,8 +650,10 @@ var _ = Describe("PhasedRollout controller", func() {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: phasedRollout.Name}, &pr)
 					return err == nil &&
 						pr.Status.Phase == stsplusv1alpha1.PhasedRolloutRolling &&
-						pr.GetConditionReady().Status == metav1.ConditionTrue &&
-						pr.GetConditionReady().Reason == stsplusv1alpha1.PhasedRolloutRolling &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Status == metav1.ConditionTrue &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Reason == stsplusv1alpha1.PhasedRolloutReady &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionFalse &&
+						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForChecks &&
 						pr.Status.RollingPodStatus.ConsecutiveSuccessfulChecks == 0 &&

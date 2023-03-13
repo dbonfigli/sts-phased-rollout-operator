@@ -20,15 +20,6 @@ spec:
       jsonPath: .spec.targetRef
       name: target-ref
       type: string
-    - jsonPath: .status.conditions[?(@.type == 'Ready')].status
-      name: ready
-      type: string
-    - jsonPath: .status.conditions[?(@.type == 'Ready')].reason
-      name: reason
-      type: string
-    - jsonPath: .status.conditions[?(@.type == 'Ready')].message
-      name: message
-      type: string
     - jsonPath: .status.phase
       name: phase
       type: string
