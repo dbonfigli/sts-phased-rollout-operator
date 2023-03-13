@@ -21,17 +21,23 @@ import (
 )
 
 const (
-	PhasedRollotErrorCannotManage = "errorCannotManage"
-	PhasedRollotErrorSTSNotFound  = "errorSTSNotFound"
-	PhasedRollotRolling           = "rolling"
-	PhasedRollotUpdated           = "updated"
-	PhasedRollotSuspened          = "suspended"
+	ConditionStatusUnknown = "Unknown"
+	ConditionStatusTrue    = "True"
+	ConditionStatusFalse   = "False"
 
-	RollingPodWaitForPodToBeUpdated       = "waitForPodToBeUpdated"
+	PhasedRolloutConditionReady = "Ready"
+
+	PhasedRollotErrorCannotManage = "ErrorCannotManage"
+	PhasedRollotErrorSTSNotFound  = "ErrorSTSNotFound"
+	PhasedRollotRolling           = "Rolling"
+	PhasedRollotUpdated           = "Updated"
+	PhasedRollotSuspened          = "Suspended"
+
+	RollingPodWaitForPodToBeUpdated       = "WaitForPodToBeUpdated"
 	RollingPodWaitForAllPodsToBeAvailable = "WaitForAllPodsToBeAvailable"
-	RollingPodWaitForInitialDelay         = "waitForInitialDelay"
-	RollingPodWaitForChecks               = "waitForChecks"
-	RollingPodPrometheusError             = "prometheusError"
+	RollingPodWaitForInitialDelay         = "WaitForInitialDelay"
+	RollingPodWaitForChecks               = "WaitForChecks"
+	RollingPodPrometheusError             = "PrometheusError"
 )
 
 // PhasedRolloutSpec defines the desired state of PhasedRollout
@@ -47,14 +53,11 @@ type PhasedRolloutSpec struct {
 
 // PhasedRolloutStatus defines the observed state of PhasedRollout
 type PhasedRolloutStatus struct {
-	Status             string            `json:"status,omitempty"`
-	Message            string            `json:"message,omitempty"`
-	ObservedGeneration int64             `json:"observedGeneration,omitempty"`
-	LastTransitionTime string            `json:"lastTransitionTime,omitempty"`
-	UpdateRevision     string            `json:"updateRevision,omitempty"`
-	RolloutStartTime   string            `json:"rolloutStartTime,omitempty"`
-	RolloutEndTime     string            `json:"rolloutEndTime,omitempty"`
-	RollingPodStatus   *RollingPodStatus `json:"rollingPodStatus,omitempty"`
+	Conditions       []metav1.Condition `json:"conditions,omitempty"`
+	UpdateRevision   string             `json:"updateRevision,omitempty"`
+	RolloutStartTime string             `json:"rolloutStartTime,omitempty"`
+	RolloutEndTime   string             `json:"rolloutEndTime,omitempty"`
+	RollingPodStatus *RollingPodStatus  `json:"rollingPodStatus,omitempty"`
 }
 
 type RollingPodStatus struct {
@@ -70,7 +73,9 @@ type RollingPodStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="target-ref",type="string",JSONPath=".spec.targetRef",description="target statefulset name"
-//+kubebuilder:printcolumn:name="status",type="string",JSONPath=".status.status"
+//+kubebuilder:printcolumn:name="ready",type="string",JSONPath=".status.conditions[?(@.type == 'Ready')].status"
+//+kubebuilder:printcolumn:name="reason",type="string",JSONPath=".status.conditions[?(@.type == 'Ready')].reason"
+//+kubebuilder:printcolumn:name="message",type="string",JSONPath=".status.conditions[?(@.type == 'Ready')].message"
 //+kubebuilder:printcolumn:name="rollout-start-time",type="date",JSONPath=".status.rolloutStartTime"
 //+kubebuilder:printcolumn:name="rollout-end-time",type="date",JSONPath=".status.rolloutEndTime"
 //+kubebuilder:printcolumn:name="age",type="date",JSONPath=".metadata.creationTimestamp"
@@ -145,4 +150,22 @@ type PrometheusQuery struct {
 	// token: token for bearer token authentication
 	// +optional
 	SecretRef string `json:"secretRef,omitempty"`
+}
+
+// GetConditionReady returns the status condition of type "ready" or creates one if it does not exsist
+// the returned condition is the actualy entry in the PhasedRollout, not a copy
+func (p *PhasedRollout) GetConditionReady() *metav1.Condition {
+	for i := range p.Status.Conditions {
+		if p.Status.Conditions[i].Type == PhasedRolloutConditionReady {
+			return &p.Status.Conditions[i]
+		}
+	}
+	if p.Status.Conditions == nil {
+		p.Status.Conditions = make([]metav1.Condition, 0)
+	}
+	p.Status.Conditions = append(p.Status.Conditions, metav1.Condition{
+		Type:   PhasedRolloutConditionReady,
+		Status: ConditionStatusUnknown,
+	})
+	return &p.Status.Conditions[len(p.Status.Conditions)-1]
 }
