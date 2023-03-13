@@ -24,10 +24,12 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -52,13 +54,6 @@ type PhasedRolloutReconciler struct {
 	Scheme           *runtime.Scheme
 	Recorder         record.EventRecorder
 	RetryWaitSeconds int
-}
-
-func reconcileResultOrDefault(r *reconcile.Result) reconcile.Result {
-	if r != nil {
-		return *r
-	}
-	return ctrl.Result{}
 }
 
 //+kubebuilder:rbac:groups=sts.plus,resources=phasedrollouts,verbs=get;list;watch;create;update;patch;delete
@@ -89,38 +84,58 @@ func (r *PhasedRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
+	oldPhasedRollout := phasedRollout.DeepCopy()
+	reconcileResult := ctrl.Result{}
+	syncResult, err := r.sync(ctx, phasedRollout)
+	if syncResult != nil {
+		reconcileResult = *syncResult
+	}
+	if err == nil {
+		phasedRollout.Status.ObservedGeneration = phasedRollout.GetGeneration()
+	}
+	if !apiequality.Semantic.DeepEqual(oldPhasedRollout.Status, phasedRollout.Status) {
+		if oldPhasedRollout.Status.Status != phasedRollout.Status.Status {
+			phasedRollout.Status.LastTransitionTime = time.Now().Format(time.RFC3339)
+		}
+		statusUpdateErr := r.Status().Update(ctx, phasedRollout)
+		err = errors.NewAggregate([]error{statusUpdateErr, err})
+	}
+	return reconcileResult, err
+}
+
+func (r *PhasedRolloutReconciler) sync(ctx context.Context, phasedRollout *stsplusv1alpha1.PhasedRollout) (*ctrl.Result, error) {
 	reconcileResult, err := r.addFinalizer(ctx, phasedRollout)
 	if reconcileResult != nil || err != nil {
-		return reconcileResultOrDefault(reconcileResult), err
+		return reconcileResult, err
 	}
 
 	sts, reconcileResult, err := r.getTargetSTS(ctx, phasedRollout)
 	if reconcileResult != nil || err != nil {
-		return reconcileResultOrDefault(reconcileResult), err
+		return reconcileResult, err
 	}
 
 	reconcileResult, err = r.cleanupBeforeDeleteingPhasedRollout(ctx, sts, phasedRollout)
 	if reconcileResult != nil || err != nil {
-		return reconcileResultOrDefault(reconcileResult), err
+		return reconcileResult, err
 	}
 
 	reconcileResult, err = r.manageSTS(ctx, sts, phasedRollout)
 	if reconcileResult != nil || err != nil {
-		return reconcileResultOrDefault(reconcileResult), err
+		return reconcileResult, err
 	}
 
 	reconcileResult, err = r.checkUpdateStrategy(ctx, sts, phasedRollout)
 	if reconcileResult != nil || err != nil {
-		return reconcileResultOrDefault(reconcileResult), err
+		return reconcileResult, err
 	}
 
 	reconcileResult, err = r.checkStandardRollingUpdate(ctx, sts, phasedRollout)
 	if reconcileResult != nil || err != nil {
-		return reconcileResultOrDefault(reconcileResult), err
+		return reconcileResult, err
 	}
 
 	reconcileResult, err = r.checkRollout(ctx, sts, phasedRollout)
-	return reconcileResultOrDefault(reconcileResult), err
+	return reconcileResult, err
 }
 
 // addFinalizer adds the finalizer to the phasedRollout.
@@ -161,11 +176,8 @@ func (r *PhasedRolloutReconciler) getTargetSTS(ctx context.Context, phasedRollou
 				return nil, &ctrl.Result{}, r.Update(ctx, phasedRollout)
 			}
 			log.V(10).Info("sts no found", "stsName", phasedRollout.Spec.TargetRef)
-			if phasedRollout.Status.Status != stsplusv1alpha1.PhasedRollotErrorSTSNotFound {
-				phasedRollout.Status.Status = stsplusv1alpha1.PhasedRollotErrorSTSNotFound
-				phasedRollout.Status.Message = "target sts " + phasedRollout.Spec.TargetRef + "not found in namespace " + phasedRollout.Namespace
-				return nil, &ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
-			}
+			phasedRollout.Status.Status = stsplusv1alpha1.PhasedRollotErrorSTSNotFound
+			phasedRollout.Status.Message = "target sts " + phasedRollout.Spec.TargetRef + "not found in namespace " + phasedRollout.Namespace
 			// stop the reconciliation loop. The indexer will trigger a reconciliation when the sts will be created
 			return nil, &ctrl.Result{}, nil
 		}
@@ -250,14 +262,13 @@ func (r *PhasedRolloutReconciler) manageSTS(ctx context.Context, sts *appsv1.Sta
 	}
 
 	// this sts seems to be legitimately managed by another phasedRollout
+	message := "sts is managed by another phasedRollout"
 	if phasedRollout.Status.Status != stsplusv1alpha1.PhasedRollotErrorCannotManage {
-		message := "sts is managed by another phasedRollout"
 		log.Info(message, "stsName", sts.Name, "reportedPhasedRolloutName", reportedPhasedRolloutName)
 		r.Recorder.Eventf(phasedRollout, "Warning", "CannotManage", message)
-		phasedRollout.Status.Status = stsplusv1alpha1.PhasedRollotErrorCannotManage
-		phasedRollout.Status.Message = message
-		return &ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
 	}
+	phasedRollout.Status.Status = stsplusv1alpha1.PhasedRollotErrorCannotManage
+	phasedRollout.Status.Message = message
 	// stop reconciliation loop, we cannot manage this sts
 	return &ctrl.Result{}, nil
 }
@@ -270,14 +281,13 @@ func (r *PhasedRolloutReconciler) checkUpdateStrategy(ctx context.Context, sts *
 	log := log.FromContext(ctx)
 
 	if sts.Spec.UpdateStrategy.Type != appsv1.RollingUpdateStatefulSetStrategyType {
+		message := "sts has not RollingUpdate as UpdateStrategy, cannot manage it"
 		if phasedRollout.Status.Status != stsplusv1alpha1.PhasedRollotErrorCannotManage {
-			message := "sts has not RollingUpdate as UpdateStrategy, cannot manage it"
 			log.Info(message, "stsName", sts.Name, "UpdateStrategy", sts.Spec.UpdateStrategy.Type)
 			r.Recorder.Eventf(phasedRollout, "Warning", "CannotManage", message)
-			phasedRollout.Status.Status = stsplusv1alpha1.PhasedRollotErrorCannotManage
-			phasedRollout.Status.Message = message
-			return &ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
 		}
+		phasedRollout.Status.Status = stsplusv1alpha1.PhasedRollotErrorCannotManage
+		phasedRollout.Status.Message = message
 		return &ctrl.Result{}, nil
 	}
 	return nil, nil
@@ -301,10 +311,9 @@ func (r *PhasedRolloutReconciler) checkStandardRollingUpdate(ctx context.Context
 		if phasedRollout.Status.Status != stsplusv1alpha1.PhasedRollotSuspened {
 			log.Info("setting phasedRollout state", "state", stsplusv1alpha1.PhasedRollotSuspened)
 			r.Recorder.Eventf(phasedRollout, "Normal", "Suspended", message)
-			phasedRollout.Status.Status = stsplusv1alpha1.PhasedRollotSuspened
-			phasedRollout.Status.Message = message
-			return &ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
 		}
+		phasedRollout.Status.Status = stsplusv1alpha1.PhasedRollotSuspened
+		phasedRollout.Status.Message = message
 		return &ctrl.Result{}, nil
 	}
 	return nil, nil
@@ -330,11 +339,10 @@ func (r *PhasedRolloutReconciler) checkRollout(ctx context.Context, sts *appsv1.
 				r.Recorder.Eventf(phasedRollout, "Normal", "RolloutCompleted", "the phased rollout is completed")
 				phasedRollout.Status.RolloutEndTime = time.Now().Format(time.RFC3339)
 			}
-			phasedRollout.Status.Status = stsplusv1alpha1.PhasedRollotUpdated
-			phasedRollout.Status.Message = "all pods updated to the current revision"
-			phasedRollout.Status.RollingPodStatus = nil
-			return &ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
 		}
+		phasedRollout.Status.Status = stsplusv1alpha1.PhasedRollotUpdated
+		phasedRollout.Status.Message = "all pods updated to the current revision"
+		phasedRollout.Status.RollingPodStatus = nil
 		return nil, nil
 	}
 	// else, need to perform a rollout
@@ -369,7 +377,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 		phasedRollout.Status.RolloutStartTime = time.Now().Format(time.RFC3339)
 		phasedRollout.Status.RolloutEndTime = ""
 		phasedRollout.Status.RollingPodStatus = nil
-		return &ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
+		return &ctrl.Result{}, nil
 	}
 
 	// check if the revision has changed during the rollout, if so the phased rollout must restart the rolling update process from the beginning because there is a new revision to deploy
@@ -383,7 +391,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 		phasedRollout.Status.RolloutStartTime = time.Now().Format(time.RFC3339)
 		phasedRollout.Status.RolloutEndTime = ""
 		phasedRollout.Status.RollingPodStatus = nil
-		return &ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
+		return &ctrl.Result{}, nil
 	}
 
 	// if partition == 0 there is nothing to do, basically we wait for the status of the phased rollout to become "updated"
@@ -400,7 +408,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			Partition: *sts.Spec.UpdateStrategy.RollingUpdate.Partition,
 		}
 		log.Info("sts partition has changed, update phased rollout status", "stsName", sts.Name, "rollingPodStatus", stsplusv1alpha1.RollingPodWaitForPodToBeUpdated)
-		return &ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
+		return &ctrl.Result{}, nil
 	}
 
 	// if status is RollingPodWaitForPodToBeUpdated, wait for the pod to the right of the partition to be updated
@@ -417,7 +425,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			phasedRollout.Status.RollingPodStatus.ConsecutiveSuccessfulChecks = 0
 			phasedRollout.Status.RollingPodStatus.ConsecutiveFailedChecks = 0
 			phasedRollout.Status.RollingPodStatus.TotalFailedChecks = 0
-			return &ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
+			return &ctrl.Result{}, nil
 		}
 
 		// get pod to the right of the partition
@@ -451,7 +459,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 		phasedRollout.Status.RollingPodStatus.ConsecutiveSuccessfulChecks = 0
 		phasedRollout.Status.RollingPodStatus.ConsecutiveFailedChecks = 0
 		phasedRollout.Status.RollingPodStatus.TotalFailedChecks = 0
-		return &ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
+		return &ctrl.Result{}, nil
 	}
 
 	// if status is RollingPodWaitForAllPodsToBeAvailable wait for all pods to be available
@@ -472,7 +480,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 		phasedRollout.Status.RollingPodStatus.ConsecutiveSuccessfulChecks = 0
 		phasedRollout.Status.RollingPodStatus.ConsecutiveFailedChecks = 0
 		phasedRollout.Status.RollingPodStatus.TotalFailedChecks = 0
-		return &ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
+		return &ctrl.Result{}, nil
 	}
 
 	// if status is RollingPodWaitForInitialDelay wait initialDelay before starting checks
@@ -482,7 +490,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			log.Error(err, "unable to parse phasedRollout.Status.RollingPodStatus.AnalisysStartTime")
 			// go back to a good status
 			phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodWaitForAllPodsToBeAvailable
-			return &ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
+			return &ctrl.Result{}, nil
 		}
 		initialDelayEndTime := analisysStartTime.Add(time.Second * time.Duration(phasedRollout.Spec.Check.InitialDelaySeconds))
 		if time.Now().After(initialDelayEndTime) {
@@ -492,7 +500,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			phasedRollout.Status.RollingPodStatus.ConsecutiveSuccessfulChecks = 0
 			phasedRollout.Status.RollingPodStatus.ConsecutiveFailedChecks = 0
 			phasedRollout.Status.RollingPodStatus.TotalFailedChecks = 0
-			return &ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
+			return &ctrl.Result{}, nil
 		}
 		log.V(10).Info("initial delay before rolling next pod is not completed, will retry after the delay is past", "stsName", sts.Name)
 		return &ctrl.Result{RequeueAfter: time.Until(initialDelayEndTime)}, nil
@@ -513,7 +521,6 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			newPartitionValue := *sts.Spec.UpdateStrategy.RollingUpdate.Partition - 1
 			sts.Spec.UpdateStrategy.RollingUpdate.Partition = &newPartitionValue
 			return &ctrl.Result{}, r.Update(ctx, sts)
-
 		}
 
 		if phasedRollout.Status.RollingPodStatus.LastCheckTime != "" {
@@ -522,7 +529,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 				log.Error(err, "unable to parse phasedRollout.Status.RollingPodStatus.LastCheckTime")
 				// go back to a good status
 				phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodWaitForAllPodsToBeAvailable
-				return &ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
+				return &ctrl.Result{}, nil
 			}
 			nextCheckTime := lastCheckTime.Add(time.Second * time.Duration(phasedRollout.Spec.Check.PeriodSeconds))
 			if !time.Now().After(nextCheckTime) {
@@ -549,7 +556,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 					if phasedRollout.Status.RollingPodStatus.Status != stsplusv1alpha1.RollingPodPrometheusError {
 						r.Recorder.Eventf(phasedRollout, "Warning", "PrometheusConfigError", fmt.Sprintf("secret \"%s\" for prometheus endpoint not found", secretRef))
 						phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodPrometheusError
-						return &ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
+						return &ctrl.Result{}, nil
 					}
 					// this is a permanet error. The indexer will trigger a reconciliation when the secret will be created
 					return &ctrl.Result{}, nil
@@ -572,7 +579,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			if phasedRollout.Status.RollingPodStatus.Status != stsplusv1alpha1.RollingPodPrometheusError {
 				r.Recorder.Eventf(phasedRollout, "Warning", "PrometheusConfigError", err.Error())
 				phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodPrometheusError
-				return &ctrl.Result{}, r.Status().Update(ctx, phasedRollout)
+				return &ctrl.Result{}, nil
 			}
 			// this is a permanet error that can only be fixed with a change in the PhasedRollout, that in turn will trigger a reconciliation
 			return &ctrl.Result{}, nil
@@ -583,7 +590,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 		if err != nil {
 			log.Error(err, "error querying prometheus")
 			phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodPrometheusError
-			return &ctrl.Result{RequeueAfter: time.Duration(r.RetryWaitSeconds) * time.Second}, r.Status().Update(ctx, phasedRollout) //TODO instead of waiting an arbitrary time we should do retries with backoff
+			return &ctrl.Result{RequeueAfter: time.Duration(r.RetryWaitSeconds) * time.Second}, nil //TODO instead of waiting an arbitrary time we should do retries with backoff
 		}
 		phasedRollout.Status.RollingPodStatus.Status = stsplusv1alpha1.RollingPodWaitForChecks
 		phasedRollout.Status.RollingPodStatus.LastCheckTime = time.Now().Format(time.RFC3339)
@@ -596,7 +603,7 @@ func (r *PhasedRolloutReconciler) rollout(ctx context.Context, sts *appsv1.State
 			phasedRollout.Status.RollingPodStatus.TotalFailedChecks += 1
 		}
 		log.Info("check performed, will requeue for next check", "wasSuccessful", checkResult, "consecutiveSuccessfulChecks", phasedRollout.Status.RollingPodStatus.ConsecutiveSuccessfulChecks, "consecutiveFailedChecks", phasedRollout.Status.RollingPodStatus.ConsecutiveFailedChecks, "totalFailedChecks", phasedRollout.Status.RollingPodStatus.TotalFailedChecks)
-		return &ctrl.Result{RequeueAfter: time.Duration(phasedRollout.Spec.Check.PeriodSeconds) * time.Second}, r.Status().Update(ctx, phasedRollout)
+		return &ctrl.Result{RequeueAfter: time.Duration(phasedRollout.Spec.Check.PeriodSeconds) * time.Second}, nil
 
 	}
 

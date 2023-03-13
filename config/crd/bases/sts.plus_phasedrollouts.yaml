@@ -120,8 +120,13 @@ spec:
           status:
             description: PhasedRolloutStatus defines the observed state of PhasedRollout
             properties:
+              lastTransitionTime:
+                type: string
               message:
                 type: string
+              observedGeneration:
+                format: int64
+                type: integer
               rollingPodStatus:
                 properties:
                   analisysStartTime:

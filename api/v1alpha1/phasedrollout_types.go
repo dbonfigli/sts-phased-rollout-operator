@@ -47,16 +47,18 @@ type PhasedRolloutSpec struct {
 
 // PhasedRolloutStatus defines the observed state of PhasedRollout
 type PhasedRolloutStatus struct {
-	Status           string            `json:"status,omitempty"` // error / rolling / updated
-	Message          string            `json:"message,omitempty"`
-	UpdateRevision   string            `json:"updateRevision,omitempty"`
-	RolloutStartTime string            `json:"rolloutStartTime,omitempty"`
-	RolloutEndTime   string            `json:"rolloutEndTime,omitempty"`
-	RollingPodStatus *RollingPodStatus `json:"rollingPodStatus,omitempty"`
+	Status             string            `json:"status,omitempty"`
+	Message            string            `json:"message,omitempty"`
+	ObservedGeneration int64             `json:"observedGeneration,omitempty"`
+	LastTransitionTime string            `json:"lastTransitionTime,omitempty"`
+	UpdateRevision     string            `json:"updateRevision,omitempty"`
+	RolloutStartTime   string            `json:"rolloutStartTime,omitempty"`
+	RolloutEndTime     string            `json:"rolloutEndTime,omitempty"`
+	RollingPodStatus   *RollingPodStatus `json:"rollingPodStatus,omitempty"`
 }
 
 type RollingPodStatus struct {
-	Status                      string `json:"status,omitempty"` // waitToBeRolled / waitToBeReady / initialDelay / rolling
+	Status                      string `json:"status,omitempty"`
 	Partition                   int32  `json:"partition"`
 	AnalisysStartTime           string `json:"analisysStartTime,omitempty"`
 	LastCheckTime               string `json:"lastCheckTime,omitempty"`
