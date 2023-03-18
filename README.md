@@ -22,7 +22,7 @@ The rollout is controlled using the `statefulset.spec.updateStrategy.rollingUpda
 
 Even if `statefulset.spec.updateStrategy.rollingUpdate.maxUnavailable` is respected, pods will be rolled one at a time. The normal rolling update checks are not superseded by the phased rollout checks (i.e. `statefulset.spec.minReadySeconds` and readiness probes will be respected).
 
-Prometheus checks semantic is similar to prometheus alerts: if data is returned then the check is considered failed, if no data is returned the check is considered successful.
+Prometheus checks semantic is similar to prometheus alerts: if data is returned then the check is considered successful, if no data is returned the check is considered failed.
 
 ### Resource Example
 
