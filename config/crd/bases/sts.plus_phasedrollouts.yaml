@@ -23,6 +23,12 @@ spec:
     - jsonPath: .status.phase
       name: phase
       type: string
+    - jsonPath: .status.rollingPodStatus.partition
+      name: partition
+      type: string
+    - jsonPath: .status.rollingPodStatus.status
+      name: rolling-pod-status
+      type: string
     - jsonPath: .status.rolloutStartTime
       name: rollout-start-time
       type: date
@@ -35,7 +41,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: PhasedRollout is the Schema for the phasedrollouts API
+        description: PhasedRollout is the Schema for the PhasedRollouts API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -50,46 +56,50 @@ spec:
           metadata:
             type: object
           spec:
-            description: PhasedRolloutSpec defines the desired state of PhasedRollout
+            description: PhasedRolloutSpec defines the desired state of PhasedRollout.
             properties:
               check:
-                description: Check defines the validation process of a rollout
+                description: Check defines the validation process of a rollout.
                 properties:
                   initialDelaySeconds:
-                    description: Number of seconds to wait before performing cheks
-                      after rollout step, after rolled pods are available. This is
-                      usefult to set to wait for metrics to settle down. Default is
-                      60 seconds, minimum is 0.
+                    description: InitialDelaySeconds is the number of seconds to wait
+                      before performing checks after a rollout step, after all pods
+                      in the sts are available. This is useful to set in order to
+                      wait for prometheus metrics to settle down. Default is 60 seconds,
+                      minimum is 0.
                     format: int32
                     minimum: 0
                     type: integer
                   periodSeconds:
-                    description: How often (in seconds) to perform the check. Default
-                      is 60 seconds, minimum is 0.
+                    description: PeriodSeconds defines how often to perform the checks.
+                      Default is 60 seconds, minimum is 0.
                     format: int32
                     minimum: 0
                     type: integer
                   query:
-                    description: 'Details on the prmetheus query to perform as check,
-                      semantic similar to a prometheus alert: no data means success,
-                      if the query returns data it means failure'
+                    description: Query contains the details to perform prometheus
+                      queries.
                     properties:
                       expr:
-                        description: Prometheus expression for the check
+                        description: Prometheus expression for the check. The semantic
+                          similar to a prometheus alert, if data is returned then
+                          the check is considered successful, if no data is returned
+                          the check is considered failed.
                         minLength: 1
                         type: string
                       insecureSkipVerify:
-                        description: true will skip tls checks
+                        description: InsecureSkipVerify, if true, will skip tls validation.
                         type: boolean
                       secretRef:
-                        description: 'Secret reference containing the prometheus credentials
-                          for basic authentication or bearer token authentication.
-                          The data in the secret can optionally have: username: username
-                          to use for basic authentication password: password to use
-                          for basic authentication token: token for bearer token authentication'
+                        description: SecretRef is the name of a secret in the same
+                          namespace of this PhasedRollout containing the prometheus
+                          credentials for basic authentication or bearer token authentication.
+                          The keys in the secret can optionally be `username` and
+                          `password` (to use for basic authentication) or `token`
+                          (for bearer token authentication)
                         type: string
                       url:
-                        description: URL of prometheus endpoint
+                        description: URL of prometheus endpoint.
                         minLength: 1
                         type: string
                     required:
@@ -97,8 +107,9 @@ spec:
                     - url
                     type: object
                   successThreshold:
-                    description: Number of consecutive success checks to consider
-                      the rollout step good. Default is 3, minimum is 1.
+                    description: SuccessThreshold is the number of consecutive successful
+                      checks that must be reached before letting the rollout proceed.
+                      Default is 3, minimum is 1.
                     format: int32
                     minimum: 1
                     type: integer
@@ -106,21 +117,24 @@ spec:
                 - query
                 type: object
               standardRollingUpdate:
-                description: StandardRollingUpdate stops the phased rollout mechanism
-                  and resume the standard RollingUpdate strategy
+                description: StandardRollingUpdate, if true, stops the phased rollout
+                  mechanism and resume the standard RollingUpdate strategy. Default
+                  is false.
                 type: boolean
               targetRef:
                 description: TargetRef references a target resource, i.e. the name
-                  of the statefulset this PhasedRollout should manage
+                  of the statefulset this PhasedRollout should manage.
                 type: string
             required:
             - check
             - targetRef
             type: object
           status:
-            description: PhasedRolloutStatus defines the observed state of PhasedRollout
+            description: PhasedRolloutStatus defines the observed state of PhasedRollout.
             properties:
               conditions:
+                description: List of status conditions to indicate the status this
+                  PhasedRollout. Known condition types are `Ready` and `Updated`.
                 items:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
@@ -189,27 +203,50 @@ spec:
                   type: object
                 type: array
               phase:
+                description: Phase is a simple, high-level summary of the status of
+                  the PhasedRollout. The conditions array contains more detail about
+                  the PhasedRollout status.
                 type: string
               rollingPodStatus:
+                description: RollingPodStatus contains information regarding the rollout
+                  of a pod.
                 properties:
                   analisysStartTime:
+                    description: AnalisysStartTime is the time when the analysis started
+                      before updating a new pod.
                     format: date-time
                     type: string
                   consecutiveFailedChecks:
+                    description: ConsecutiveFailedChecks is the number of consecutive
+                      failed checks performed up until now during the analysis before
+                      rolling the next pod.
                     format: int32
                     type: integer
                   consecutiveSuccessfulChecks:
+                    description: ConsecutiveSuccessfulChecks is the number of consecutive
+                      successful checks performed up until now during the analysis
+                      before rolling the next pod.
                     format: int32
                     type: integer
                   lastCheckTime:
+                    description: LastCheckTime is the time when the last check was
+                      performed before updating a new pod.
                     format: date-time
                     type: string
                   partition:
+                    description: Partition is the last seen `sts.spec.updateStrategy.rollingUpdate.partition`
+                      value.
                     format: int32
                     type: integer
                   status:
+                    description: Status contains a brief description of the phase
+                      where the ongoing rollout is during the update process for a
+                      pod.
                     type: string
                   totalFailedChecks:
+                    description: TotalFailedChecks is the total number of failed checks
+                      performed up until now during the analysis before rolling the
+                      next pod.
                     format: int32
                     type: integer
                 required:
@@ -219,12 +256,18 @@ spec:
                 - totalFailedChecks
                 type: object
               rolloutEndTime:
+                description: RolloutStartTime is the time when the latest rollout
+                  ended.
                 format: date-time
                 type: string
               rolloutStartTime:
+                description: RolloutStartTime is the time when the latest rollout
+                  started.
                 format: date-time
                 type: string
               updateRevision:
+                description: UpdateRevision is the revision of the sts as seen in
+                  the `sts.status.updateRevision` field.
                 type: string
             type: object
         type: object

@@ -171,7 +171,7 @@ func (r *PhasedRolloutReconciler) getTargetSTS(ctx context.Context, phasedRollou
 			}
 			log.V(10).Info("sts no found", "stsName", phasedRollout.Spec.TargetRef)
 			phasedRollout.Status.Phase = stsplusv1alpha1.PhasedRolloutErrorSTSNotFound
-			message := "target sts " + phasedRollout.Spec.TargetRef + "not found in namespace " + phasedRollout.Namespace
+			message := "target sts " + phasedRollout.Spec.TargetRef + " not found in namespace " + phasedRollout.Namespace
 			phasedRollout.SetCondition(stsplusv1alpha1.PhasedRolloutConditionReady, metav1.ConditionFalse, stsplusv1alpha1.PhasedRolloutErrorSTSNotFound, message)
 			phasedRollout.SetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated, metav1.ConditionUnknown, stsplusv1alpha1.PhasedRolloutErrorSTSNotFound, message)
 			// stop the reconciliation loop. The indexer will trigger a reconciliation when the sts will be created

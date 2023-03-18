@@ -39,46 +39,62 @@ const (
 	RollingPodPrometheusError             = "PrometheusError"
 )
 
-// PhasedRolloutSpec defines the desired state of PhasedRollout
+// PhasedRolloutSpec defines the desired state of PhasedRollout.
 type PhasedRolloutSpec struct {
-	// TargetRef references a target resource, i.e. the name of the statefulset this PhasedRollout should manage
+	// TargetRef references a target resource, i.e. the name of the statefulset this PhasedRollout should manage.
 	TargetRef string `json:"targetRef"`
-	// Check defines the validation process of a rollout
+	// Check defines the validation process of a rollout.
 	Check Check `json:"check"`
-	// StandardRollingUpdate stops the phased rollout mechanism and resume the standard RollingUpdate strategy
+	// StandardRollingUpdate, if true, stops the phased rollout mechanism and resume the standard RollingUpdate strategy.
+	// Default is false.
 	// +optional
 	StandardRollingUpdate bool `json:"standardRollingUpdate"`
 }
 
-// PhasedRolloutStatus defines the observed state of PhasedRollout
+// PhasedRolloutStatus defines the observed state of PhasedRollout.
 type PhasedRolloutStatus struct {
-	Conditions       []metav1.Condition `json:"conditions,omitempty"`
-	Phase            string             `json:"phase,omitempty"`
-	UpdateRevision   string             `json:"updateRevision,omitempty"`
-	RolloutStartTime metav1.Time        `json:"rolloutStartTime,omitempty"`
-	RolloutEndTime   metav1.Time        `json:"rolloutEndTime,omitempty"`
-	RollingPodStatus *RollingPodStatus  `json:"rollingPodStatus,omitempty"`
+	// List of status conditions to indicate the status this PhasedRollout. Known condition types are `Ready` and `Updated`.
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// Phase is a simple, high-level summary of the status of the PhasedRollout. The conditions array contains more detail about the PhasedRollout status.
+	Phase string `json:"phase,omitempty"`
+	// UpdateRevision is the revision of the sts as seen in the `sts.status.updateRevision` field.
+	UpdateRevision string `json:"updateRevision,omitempty"`
+	// RolloutStartTime is the time when the latest rollout started.
+	RolloutStartTime metav1.Time `json:"rolloutStartTime,omitempty"`
+	// RolloutStartTime is the time when the latest rollout ended.
+	RolloutEndTime metav1.Time `json:"rolloutEndTime,omitempty"`
+	// RollingPodStatus contains information regarding the rollout of a pod.
+	RollingPodStatus *RollingPodStatus `json:"rollingPodStatus,omitempty"`
 }
 
 type RollingPodStatus struct {
-	Status                      string      `json:"status,omitempty"`
-	Partition                   int32       `json:"partition"`
-	AnalisysStartTime           metav1.Time `json:"analisysStartTime,omitempty"`
-	LastCheckTime               metav1.Time `json:"lastCheckTime,omitempty"`
-	ConsecutiveSuccessfulChecks int32       `json:"consecutiveSuccessfulChecks"`
-	ConsecutiveFailedChecks     int32       `json:"consecutiveFailedChecks"`
-	TotalFailedChecks           int32       `json:"totalFailedChecks"`
+	// Status contains a brief description of the phase where the ongoing rollout is during the update process for a pod.
+	Status string `json:"status,omitempty"`
+	// Partition is the last seen `sts.spec.updateStrategy.rollingUpdate.partition` value.
+	Partition int32 `json:"partition"`
+	// AnalisysStartTime is the time when the analysis started before updating a new pod.
+	AnalisysStartTime metav1.Time `json:"analisysStartTime,omitempty"`
+	// LastCheckTime is the time when the last check was performed before updating a new pod.
+	LastCheckTime metav1.Time `json:"lastCheckTime,omitempty"`
+	// ConsecutiveSuccessfulChecks is the number of consecutive successful checks performed up until now during the analysis before rolling the next pod.
+	ConsecutiveSuccessfulChecks int32 `json:"consecutiveSuccessfulChecks"`
+	// ConsecutiveFailedChecks is the number of consecutive failed checks performed up until now during the analysis before rolling the next pod.
+	ConsecutiveFailedChecks int32 `json:"consecutiveFailedChecks"`
+	// TotalFailedChecks is the total number of failed checks performed up until now during the analysis before rolling the next pod.
+	TotalFailedChecks int32 `json:"totalFailedChecks"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="target-ref",type="string",JSONPath=".spec.targetRef",description="target statefulset name"
 //+kubebuilder:printcolumn:name="phase",type="string",JSONPath=".status.phase"
+//+kubebuilder:printcolumn:name="partition",type="string",JSONPath=".status.rollingPodStatus.partition"
+//+kubebuilder:printcolumn:name="rolling-pod-status",type="string",JSONPath=".status.rollingPodStatus.status"
 //+kubebuilder:printcolumn:name="rollout-start-time",type="date",JSONPath=".status.rolloutStartTime"
 //+kubebuilder:printcolumn:name="rollout-end-time",type="date",JSONPath=".status.rolloutEndTime"
 //+kubebuilder:printcolumn:name="age",type="date",JSONPath=".metadata.creationTimestamp"
 
-// PhasedRollout is the Schema for the phasedrollouts API
+// PhasedRollout is the Schema for the PhasedRollouts API.
 type PhasedRollout struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -89,7 +105,7 @@ type PhasedRollout struct {
 
 //+kubebuilder:object:root=true
 
-// PhasedRolloutList contains a list of PhasedRollout
+// PhasedRolloutList contains a list of PhasedRollout.
 type PhasedRolloutList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -100,58 +116,55 @@ func init() {
 	SchemeBuilder.Register(&PhasedRollout{}, &PhasedRolloutList{})
 }
 
-// Check is used to describe how the check should be done
+// Check is used to describe how the check should be done.
 type Check struct {
 	//+kubebuilder:validation:Minimum=0
 
-	// Number of seconds to wait before performing cheks after rollout step, after rolled pods are available. This is usefult to set to wait for metrics to settle down. Default is 60 seconds, minimum is 0.
+	// InitialDelaySeconds is the number of seconds to wait before performing checks after a rollout step, after all pods in the sts are available. This is useful to set in order to wait for prometheus metrics to settle down. Default is 60 seconds, minimum is 0.
 	// +optional
 	InitialDelaySeconds int32 `json:"initialDelaySeconds"`
 
 	//+kubebuilder:validation:Minimum=0
 
-	// How often (in seconds) to perform the check. Default is 60 seconds, minimum is 0.
+	// PeriodSeconds defines how often to perform the checks. Default is 60 seconds, minimum is 0.
 	// +optional
 	PeriodSeconds int32 `json:"periodSeconds"`
 
 	//+kubebuilder:validation:Minimum=1
 
-	// Number of consecutive success checks to consider the rollout step good. Default is 3, minimum is 1.
+	// SuccessThreshold is the number of consecutive successful checks that must be reached before letting the rollout proceed. Default is 3, minimum is 1.
 	// +optional
 	SuccessThreshold int32 `json:"successThreshold"`
 
-	// Details on the prmetheus query to perform as check, semantic similar to a prometheus alert: no data means success, if the query returns data it means failure
+	// Query contains the details to perform prometheus queries.
 	Query PrometheusQuery `json:"query"`
 }
 
-// PrometheusQuery describes how to perform the prometheus query
+// PrometheusQuery describes how to perform the prometheus query.
 type PrometheusQuery struct {
 
 	//+kubebuilder:validation:MinLength=1
 
-	// Prometheus expression for the check
+	// Prometheus expression for the check. The semantic similar to a prometheus alert, if data is returned then the check is considered successful, if no data is returned the check is considered failed.
 	Expr string `json:"expr"`
 
 	//+kubebuilder:validation:MinLength=1
 
-	// URL of prometheus endpoint
+	// URL of prometheus endpoint.
 	URL string `json:"url"`
 
-	// true will skip tls checks
+	// InsecureSkipVerify, if true, will skip tls validation.
 	// +optional
 	InsecureSkipVerify bool `json:"insecureSkipVerify"`
 
-	// Secret reference containing the prometheus credentials for basic authentication or bearer token authentication.
-	// The data in the secret can optionally have:
-	// username: username to use for basic authentication
-	// password: password to use for basic authentication
-	// token: token for bearer token authentication
+	// SecretRef is the name of a secret in the same namespace of this PhasedRollout containing the prometheus credentials for basic authentication or bearer token authentication.
+	// The keys in the secret can optionally be `username` and `password` (to use for basic authentication) or `token` (for bearer token authentication)
 	// +optional
 	SecretRef string `json:"secretRef,omitempty"`
 }
 
-// GetConditionReady returns the status condition of defined type or creates one if it does not exsist
-// the returned condition is the actualy entry in the PhasedRollout, not a copy
+// GetCondition returns the status condition of defined type or creates one if it does not exist.
+// The returned condition is the actualy entry in the PhasedRollout, not a copy.
 func (p *PhasedRollout) GetCondition(conditionType string) *metav1.Condition {
 	for i := range p.Status.Conditions {
 		if p.Status.Conditions[i].Type == conditionType {
@@ -168,6 +181,7 @@ func (p *PhasedRollout) GetCondition(conditionType string) *metav1.Condition {
 	return &p.Status.Conditions[len(p.Status.Conditions)-1]
 }
 
+// SetCondition sets the status condition of defined type or creates one if it does not exist.
 func (p *PhasedRollout) SetCondition(conditionType string, status metav1.ConditionStatus, reason, message string) {
 	var c *metav1.Condition
 	if p.Status.Conditions == nil {
