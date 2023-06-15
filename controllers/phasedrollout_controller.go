@@ -40,7 +40,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	stsplusv1alpha1 "github.com/dbonfigli/sts-phased-rollout-operator/api/v1alpha1"
 	"github.com/dbonfigli/sts-phased-rollout-operator/pkg/prometheus"
@@ -624,15 +623,15 @@ func (r *PhasedRolloutReconciler) preventUncontrolledRollouts(ctx context.Contex
 	return nil, nil
 }
 
-func (r *PhasedRolloutReconciler) mapSTSToPhasedRollout(o client.Object) []reconcile.Request {
-	log := log.FromContext(context.Background())
+func (r *PhasedRolloutReconciler) mapSTSToPhasedRollout(ctx context.Context, o client.Object) []reconcile.Request {
+	log := log.FromContext(ctx)
 
 	attachedhasedRollouts := &stsplusv1alpha1.PhasedRolloutList{}
 	listOps := &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(".spec.targetRef", o.GetName()),
 		Namespace:     o.GetNamespace(),
 	}
-	err := r.List(context.TODO(), attachedhasedRollouts, listOps)
+	err := r.List(ctx, attachedhasedRollouts, listOps)
 	if err != nil {
 		return []reconcile.Request{}
 	}
@@ -650,15 +649,15 @@ func (r *PhasedRolloutReconciler) mapSTSToPhasedRollout(o client.Object) []recon
 	return requests
 }
 
-func (r *PhasedRolloutReconciler) mapSecretToPhasedRollout(o client.Object) []reconcile.Request {
-	log := log.FromContext(context.Background())
+func (r *PhasedRolloutReconciler) mapSecretToPhasedRollout(ctx context.Context, o client.Object) []reconcile.Request {
+	log := log.FromContext(ctx)
 
 	attachedhasedRollouts := &stsplusv1alpha1.PhasedRolloutList{}
 	listOps := &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(".spec.check.query.secretRef", o.GetName()),
 		Namespace:     o.GetNamespace(),
 	}
-	err := r.List(context.TODO(), attachedhasedRollouts, listOps)
+	err := r.List(ctx, attachedhasedRollouts, listOps)
 	if err != nil {
 		return []reconcile.Request{}
 	}
@@ -701,10 +700,10 @@ func (r *PhasedRolloutReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&stsplusv1alpha1.PhasedRollout{}).
-		Watches(&source.Kind{Type: &appsv1.StatefulSet{}},
+		Watches(&appsv1.StatefulSet{},
 			handler.EnqueueRequestsFromMapFunc(r.mapSTSToPhasedRollout),
 		).
-		Watches(&source.Kind{Type: &corev1.Secret{}},
+		Watches(&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(r.mapSecretToPhasedRollout),
 		).
 		Complete(r)

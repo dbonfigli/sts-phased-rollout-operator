@@ -27,6 +27,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -62,24 +63,24 @@ func (r *PhasedRollout) Default() {
 var _ webhook.Validator = &PhasedRollout{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *PhasedRollout) ValidateCreate() error {
+func (r *PhasedRollout) ValidateCreate() (admission.Warnings, error) {
 	phasedrolloutlog.V(10).Info("validate create", "name", r.Name)
 
-	return r.validatePhasedRollout()
+	return nil, r.validatePhasedRollout()
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *PhasedRollout) ValidateUpdate(old runtime.Object) error {
+func (r *PhasedRollout) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	phasedrolloutlog.V(10).Info("validate update", "name", r.Name)
 
-	return r.validatePhasedRollout()
+	return nil, r.validatePhasedRollout()
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *PhasedRollout) ValidateDelete() error {
+func (r *PhasedRollout) ValidateDelete() (admission.Warnings, error) {
 	phasedrolloutlog.V(10).Info("validate delete", "name", r.Name)
 
-	return nil
+	return nil, nil
 }
 
 func (r *PhasedRollout) validatePhasedRollout() error {
