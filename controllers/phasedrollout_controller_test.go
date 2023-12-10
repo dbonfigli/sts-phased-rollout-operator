@@ -625,7 +625,7 @@ var _ = Describe("PhasedRollout controller", func() {
 						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionFalse &&
 						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForChecks
-				}, (checkInitialDelaySeconds+timeout)*time.Second, interval).Should(BeTrue())
+				}, time.Duration(checkInitialDelaySeconds+timeout)*time.Second, interval).Should(BeTrue())
 
 				By("on prometheus errors Status.RollingPodStatus.Status should be RollingPodPrometheusError")
 				fakePrometheusServer.shouldReturnError = true
