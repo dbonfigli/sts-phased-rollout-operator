@@ -1,6 +1,6 @@
 module github.com/dbonfigli/sts-phased-rollout-operator
 
-go 1.19
+go 1.21
 
 require (
 	github.com/onsi/ginkgo/v2 v2.12.0

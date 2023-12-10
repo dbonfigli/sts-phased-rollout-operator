@@ -26,7 +26,7 @@ make deploy-test-requirements
 ```sh
 make docker-build docker-push IMG=<some-registry>/sts-phased-rollout-operator:tag
 ```
-If you use kind you can push the image directy to the cluster with:
+Or, if you use kind you can push the image directly to the cluster with:
 ```sh
 IMAGE=<some-registry>/sts-phased-rollout-operator:tag
 make docker-build IMG=$IMAGE

@@ -49,7 +49,7 @@ endif
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.25.0
+ENVTEST_K8S_VERSION = 1.28.3
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -122,11 +122,12 @@ run-debug: manifests generate fmt vet ## Run a controller from your host with de
 .PHONY: create-test-requirements
 deploy-test-requirements: ## Deploy the requirements to run tests, will deploy cert-manager and the prometheus operator.
 	helm repo add jetstack https://charts.jetstack.io
+	helm repo update
 	helm upgrade -i \
 	cert-manager jetstack/cert-manager \
 	--namespace cert-manager \
 	--create-namespace \
-	--version v1.11.0 \
+	--version v1.13.2 \
 	--set installCRDs=true
 	helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 	helm upgrade -i prometheus prometheus-community/kube-prometheus-stack \
@@ -199,8 +200,8 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v3.8.7
-CONTROLLER_TOOLS_VERSION ?= v0.10.0
+KUSTOMIZE_VERSION ?= v5.3.0
+CONTROLLER_TOOLS_VERSION ?= v0.13.0
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
