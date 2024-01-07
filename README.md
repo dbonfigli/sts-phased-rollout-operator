@@ -1,7 +1,7 @@
 # sts-phased-rollout-operator
 The sts phased rollout operator manages the update of statefulsets pods in a controlled fashion, on top of the standard rolling update.
 
-During the standard rolling update process, at each pod update, the update process is put on hold until several prometheus checks are performed and only if they are succesful the rollout is permitted to continue to the next pod.
+During the standard rolling update process, at each pod update, the update process is put on hold until several prometheus checks are performed and only if they are successful the rollout is permitted to continue to the next pod.
 
 This is helpful not only to carefully perform deploys but also to stop or slow down deploys when external factors are not met, for example, a rolling update of an elasticsearch cluster can be temporary stopped if a backup is ongoing, or a kafka cluster should temporary stop upgrades if the consumers are delayed to avoid further disruption.
 
