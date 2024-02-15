@@ -7,7 +7,7 @@ require (
 	github.com/onsi/gomega v1.31.1
 	github.com/prometheus/prometheus v0.49.1
 	k8s.io/api v0.29.1
-	k8s.io/apimachinery v0.29.1
+	k8s.io/apimachinery v0.29.2
 	k8s.io/client-go v0.29.1
 	sigs.k8s.io/controller-runtime v0.17.1
 )
