@@ -1,5 +1,5 @@
 /*
-Copyright 2022.
+Copyright 2024.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	stsplusv1alpha1 "github.com/dbonfigli/sts-phased-rollout-operator/api/v1alpha1"
-	"github.com/dbonfigli/sts-phased-rollout-operator/pkg/prometheus"
+	"github.com/dbonfigli/sts-phased-rollout-operator/internal/pkg/prometheus"
 )
 
 const managedByAnnotation = "sts.plus/phasedRollout"
