@@ -5,7 +5,7 @@ go 1.22.2
 require (
 	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/onsi/gomega v1.33.1
-	github.com/prometheus/prometheus v0.52.0
+	github.com/prometheus/prometheus v0.52.1
 	k8s.io/api v0.30.1
 	k8s.io/apimachinery v0.30.1
 	k8s.io/client-go v0.30.1
