@@ -29,6 +29,9 @@ import (
 
 const namespace = "sts-phased-rollout-operator-system"
 
+// projectimage stores the name of the image used in the example
+const projectimage = "dbonfigli/sts-phased-rollout-operator:latest"
+
 var _ = Describe("controller", Ordered, func() {
 	BeforeAll(func() {
 		By("installing prometheus operator")
@@ -43,6 +46,11 @@ var _ = Describe("controller", Ordered, func() {
 	})
 
 	AfterAll(func() {
+		By("undeploying the controller-manager")
+		cmd := exec.Command("make", "undeploy", fmt.Sprintf("IMG=%s", projectimage))
+		_, err := utils.Run(cmd)
+		ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
 		By("uninstalling the Prometheus manager bundle")
 		utils.UninstallPrometheusOperator()
 
@@ -50,7 +58,16 @@ var _ = Describe("controller", Ordered, func() {
 		utils.UninstallCertManager()
 
 		By("removing manager namespace")
-		cmd := exec.Command("kubectl", "delete", "ns", namespace)
+		cmd = exec.Command("kubectl", "delete", "ns", namespace)
+		_, _ = utils.Run(cmd)
+
+		// deleting these leases to speed up cert-manager controllers re-election otherwise we have to wait 1m between e2e tests
+		By("removing lease cert-manager-cainjector-leader-election")
+		cmd = exec.Command("kubectl", "delete", "-n", "kube-system", "lease", "cert-manager-cainjector-leader-election")
+		_, _ = utils.Run(cmd)
+
+		By("removing lease cert-manager-controller")
+		cmd = exec.Command("kubectl", "delete", "-n", "kube-system", "lease", "cert-manager-controller")
 		_, _ = utils.Run(cmd)
 	})
 
@@ -58,9 +75,6 @@ var _ = Describe("controller", Ordered, func() {
 		It("should run successfully", func() {
 			var controllerPodName string
 			var err error
-
-			// projectimage stores the name of the image used in the example
-			var projectimage = "sts.plus/sts-phased-rollout-operator:v0.0.1"
 
 			By("building the manager(Operator) image")
 			cmd := exec.Command("make", "docker-build", fmt.Sprintf("IMG=%s", projectimage))
