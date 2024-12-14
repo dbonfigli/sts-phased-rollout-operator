@@ -53,7 +53,7 @@ OPERATOR_SDK_VERSION ?= v1.34.1
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.28.3
+ENVTEST_K8S_VERSION = 1.31.0
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -121,7 +121,7 @@ test-e2e: # Run the e2e tests against a Kind k8s instance that is spun up. The c
 	go test ./test/e2e/ -v -ginkgo.v
 	
 GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
-GOLANGCI_LINT_VERSION ?= v1.54.2
+GOLANGCI_LINT_VERSION ?= v1.62.2
 golangci-lint:
 	@[ -f $(GOLANGCI_LINT) ] || { \
 	set -e ;\
@@ -158,7 +158,7 @@ deploy-test-requirements: ## Deploy the requirements to run tests, will deploy c
 	cert-manager jetstack/cert-manager \
 	--namespace cert-manager \
 	--create-namespace \
-	--version v1.14.5 \
+	--version v1.16.2 \
 	--set installCRDs=true
 	helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 	helm upgrade -i prometheus prometheus-community/kube-prometheus-stack \
@@ -231,8 +231,8 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v5.4.1
-CONTROLLER_TOOLS_VERSION ?= v0.15.0
+KUSTOMIZE_VERSION ?= v5.5.0
+CONTROLLER_TOOLS_VERSION ?= v0.16.5
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
