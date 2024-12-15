@@ -24,7 +24,8 @@ make deploy-test-requirements
 2. Build and push your image to the location specified by `IMG`:
 
 ```sh
-make docker-build docker-push IMG=<some-registry>/sts-phased-rollout-operator:tag
+IMAGE=<some-registry>/sts-phased-rollout-operator:tag
+make docker-build docker-push IMG=$IMAGE
 ```
 Or, if you use kind you can push the image directly to the cluster with:
 ```sh
@@ -36,7 +37,7 @@ kind load docker-image $IMAGE
 3. Deploy the controller to the cluster with the image specified by `IMG`:
 
 ```sh
-make deploy IMG=<some-registry>/sts-phased-rollout-operator:tag
+make deploy IMG=$IMAGE
 ```
 
 4. Install Instances of Custom Resources:

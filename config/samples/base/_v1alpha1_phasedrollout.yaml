@@ -2,11 +2,8 @@ apiVersion: sts.plus/v1alpha1
 kind: PhasedRollout
 metadata:
   labels:
-    app.kubernetes.io/name: phasedrollout
-    app.kubernetes.io/instance: phasedrollout-sample
-    app.kubernetes.io/part-of: sts-phased-rollout-operator
+    app.kubernetes.io/name: sts-phased-rollout-operator
     app.kubernetes.io/managed-by: kustomize
-    app.kubernetes.io/created-by: sts-phased-rollout-operator
   name: phasedrollout-sample
   namespace: sample
 spec:

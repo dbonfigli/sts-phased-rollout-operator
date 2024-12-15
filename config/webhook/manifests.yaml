@@ -6,14 +6,13 @@ metadata:
 webhooks:
 - admissionReviewVersions:
   - v1
-  - v1beta1
   clientConfig:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-sts-phased-rollout-v1alpha1-phasedrollout
+      path: /mutate-sts-plus-v1alpha1-phasedrollout
   failurePolicy: Ignore
-  name: mphasedrollout.kb.io
+  name: mphasedrollout-v1alpha1.kb.io
   rules:
   - apiGroups:
     - sts.plus
@@ -33,14 +32,13 @@ metadata:
 webhooks:
 - admissionReviewVersions:
   - v1
-  - v1beta1
   clientConfig:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-sts-phased-rollout-v1alpha1-phasedrollout
+      path: /validate-sts-plus-v1alpha1-phasedrollout
   failurePolicy: Ignore
-  name: vphasedrollout.kb.io
+  name: vphasedrollout-v1alpha1.kb.io
   rules:
   - apiGroups:
     - sts.plus
