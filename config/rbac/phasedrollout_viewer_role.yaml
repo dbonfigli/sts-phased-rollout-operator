@@ -3,11 +3,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
-    app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/instance: phasedrollout-viewer-role
-    app.kubernetes.io/component: rbac
-    app.kubernetes.io/created-by: sts-phased-rollout-operator
-    app.kubernetes.io/part-of: sts-phased-rollout-operator
+    app.kubernetes.io/name: sts-phased-rollout-operator
     app.kubernetes.io/managed-by: kustomize
   name: phasedrollout-viewer-role
 rules:

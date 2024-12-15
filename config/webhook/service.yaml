@@ -1,9 +1,8 @@
-
 apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app.kubernetes.io/name: phasedrollout
+    app.kubernetes.io/name: sts-phased-rollout-operator
     app.kubernetes.io/managed-by: kustomize
   name: webhook-service
   namespace: system

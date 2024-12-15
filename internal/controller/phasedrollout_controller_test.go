@@ -1,25 +1,20 @@
 /*
+Copyright 2024.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-// +kubebuilder:docs-gen:collapse=Apache License
 
-/*
-Ideally, we should have one `<kind>_controller_test.go` for each controller scaffolded and called in the `suite_test.go`.
-So, let's write our example test for the CronJob controller (`cronjob_controller_test.go.`)
-*/
-
-/*
-As usual, we start with the necessary imports. We also define some utility variables.
-*/
-package controllers
+package controller
 
 import (
 	"context"
@@ -204,7 +199,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					sts := stsTemplate
 					sts.Name = randomName(STSName)
 					sts.Annotations = make(map[string]string)
-					sts.Annotations[managedByAnnotation] = "non-existant-phased-rollout"
+					sts.Annotations[managedByAnnotation] = "non-existent-phased-rollout"
 					Expect(k8sClient.Create(context.Background(), &sts)).Should(Succeed())
 
 					By("Creating the phasedRollout")
@@ -236,7 +231,7 @@ var _ = Describe("PhasedRollout controller", func() {
 					By("Creating the other phasedRollout")
 					otherPhasedRollout := phasedRolloutTemplate
 					otherPhasedRollout.Name = otherPhasedRolloutName
-					otherPhasedRollout.Spec.TargetRef = "non-existant-sts"
+					otherPhasedRollout.Spec.TargetRef = "non-existent-sts"
 					Expect(k8sClient.Create(context.Background(), &otherPhasedRollout)).Should(Succeed())
 
 					By("Creating the phasedRollout")
@@ -438,8 +433,9 @@ var _ = Describe("PhasedRollout controller", func() {
 				}, timeout, interval).Should(BeTrue())
 
 				By("Setting the sts revision")
-				sts.Status.CurrentRevision = "web-0000000000"
-				sts.Status.UpdateRevision = "web-0000000000"
+				revision := "web-0000000000"
+				sts.Status.CurrentRevision = revision
+				sts.Status.UpdateRevision = revision
 				sts.Status.Replicas = 2
 				sts.Status.ReadyReplicas = 2
 				sts.Status.AvailableReplicas = 2
@@ -448,7 +444,7 @@ var _ = Describe("PhasedRollout controller", func() {
 				By("Creating the sts pods and expecting them to be created")
 				for i := 0; i < 2; i++ {
 					pod := podTemplate
-					pod.Labels["controller-revision-hash"] = "web-0000000000"
+					pod.Labels["controller-revision-hash"] = revision
 					pod.Name = sts.Name + "-" + strconv.Itoa(i)
 					Expect(k8sClient.Create(context.Background(), &pod)).Should(Succeed())
 					Eventually(func() bool {
@@ -479,7 +475,8 @@ var _ = Describe("PhasedRollout controller", func() {
 
 				By("Updating the sts revision to a new one")
 				Expect(k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: sts.Name}, &sts)).Should(Succeed())
-				sts.Status.UpdateRevision = "web-0000000001"
+				updateRevision := "web-0000000001"
+				sts.Status.UpdateRevision = updateRevision
 				Expect(k8sClient.Status().Update(context.Background(), &sts)).Should(Succeed())
 
 				By("Expecting the phasedRollout to have the correct status (status.phase == PhasedRolloutRolling, RollingPodStatus.Status == RollingPodWaitForInitialDelay, RollingPodStatus.Partition == 2")
@@ -492,7 +489,7 @@ var _ = Describe("PhasedRollout controller", func() {
 						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Reason == stsplusv1alpha1.PhasedRolloutReady &&
 						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionFalse &&
 						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutRolling &&
-						pr.Status.UpdateRevision == "web-0000000001" &&
+						pr.Status.UpdateRevision == updateRevision &&
 						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForInitialDelay &&
 						pr.Status.RollingPodStatus.Partition == 2
@@ -508,7 +505,7 @@ var _ = Describe("PhasedRollout controller", func() {
 						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Reason == stsplusv1alpha1.PhasedRolloutReady &&
 						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionFalse &&
 						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutRolling &&
-						pr.Status.UpdateRevision == "web-0000000001" &&
+						pr.Status.UpdateRevision == updateRevision &&
 						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodPrometheusError
 				}, time.Duration(checkPeriodSeconds*2)*time.Second, interval).Should(BeTrue())
@@ -539,7 +536,7 @@ var _ = Describe("PhasedRollout controller", func() {
 						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Reason == stsplusv1alpha1.PhasedRolloutReady &&
 						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionFalse &&
 						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutRolling &&
-						pr.Status.UpdateRevision == "web-0000000001" &&
+						pr.Status.UpdateRevision == updateRevision &&
 						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForChecks &&
 						pr.Status.RollingPodStatus.ConsecutiveSuccessfulChecks == 1
@@ -555,7 +552,7 @@ var _ = Describe("PhasedRollout controller", func() {
 						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionReady).Reason == stsplusv1alpha1.PhasedRolloutReady &&
 						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionFalse &&
 						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutRolling &&
-						pr.Status.UpdateRevision == "web-0000000001" &&
+						pr.Status.UpdateRevision == updateRevision &&
 						pr.Status.RollingPodStatus != nil &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForPodToBeUpdated
 				}, checkPeriodSeconds*2, interval).Should(BeTrue())
@@ -576,7 +573,7 @@ var _ = Describe("PhasedRollout controller", func() {
 				By("Setting pod-1 to updated revision")
 				var pod corev1.Pod
 				Expect(k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: sts.Name + "-1"}, &pod)).Should(Succeed())
-				pod.Labels["controller-revision-hash"] = "web-0000000001"
+				pod.Labels["controller-revision-hash"] = updateRevision
 				Expect(k8sClient.Update(context.Background(), &pod)).Should(Succeed())
 
 				By("Status.RollingPodStatus.Status should be status should be RollingPodWaitForAllPodsToBeAvailable")
@@ -625,7 +622,7 @@ var _ = Describe("PhasedRollout controller", func() {
 						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Status == metav1.ConditionFalse &&
 						pr.GetCondition(stsplusv1alpha1.PhasedRolloutConditionUpdated).Reason == stsplusv1alpha1.PhasedRolloutRolling &&
 						pr.Status.RollingPodStatus.Status == stsplusv1alpha1.RollingPodWaitForChecks
-				}, time.Duration(checkInitialDelaySeconds+timeout)*time.Second, interval).Should(BeTrue())
+				}, checkInitialDelaySeconds+timeout, interval).Should(BeTrue())
 
 				By("on prometheus errors Status.RollingPodStatus.Status should be RollingPodPrometheusError")
 				fakePrometheusServer.shouldReturnError = true
@@ -690,7 +687,7 @@ func createFakePrometheusServer() *fakePrometheusServer {
 		if f.shouldReturnError {
 			w.WriteHeader(500)
 		} else if f.shouldReturnData {
-			fmt.Fprintf(w, `
+			_, _ = fmt.Fprintf(w, `
 				{
 					"status": "success",
 					"data": {
@@ -699,7 +696,7 @@ func createFakePrometheusServer() *fakePrometheusServer {
 					}
 				}`)
 		} else {
-			fmt.Fprintf(w, `
+			_, _ = fmt.Fprintf(w, `
 				{
 					"status": "success",
 					"data": {
