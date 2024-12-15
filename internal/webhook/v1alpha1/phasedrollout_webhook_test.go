@@ -86,7 +86,7 @@ var _ = Describe("PhasedRollout Webhook", func() {
 			obj.Spec.Check.PeriodSeconds = 0
 			obj.Spec.Check.SuccessThreshold = 0
 			By("calling the Default method to apply defaults")
-			defaulter.Default(ctx, obj)
+			_ = defaulter.Default(ctx, obj)
 			By("checking that the default values are set")
 			Expect(obj.Spec.Check.InitialDelaySeconds).To(Equal(int32(60)))
 			Expect(obj.Spec.Check.PeriodSeconds).To(Equal(int32(60)))
@@ -99,28 +99,28 @@ var _ = Describe("PhasedRollout Webhook", func() {
 			By("simulating an invalid creation scenario")
 			obj.Spec.Check.Query.Expr = "invalid_promql{"
 			_, error := validator.ValidateCreate(ctx, obj)
-			Expect(error).ToNot(BeNil())
+			Expect(error).To(HaveOccurred())
 		})
 
 		It("Should allow creation if promql expression is valid", func() {
 			By("simulating an invalid creation scenario")
 			obj.Spec.Check.Query.Expr = "http_requests_total{job=~\".*server\"}"
 			_, error := validator.ValidateCreate(ctx, obj)
-			Expect(error).To(BeNil())
+			Expect(error).ToNot(HaveOccurred())
 		})
 
 		It("Should deny update if url is invalid", func() {
 			By("simulating an invalid update scenario")
 			obj.Spec.Check.Query.URL = "http://\\"
 			_, error := validator.ValidateUpdate(ctx, oldObj, obj)
-			Expect(error).ToNot(BeNil())
+			Expect(error).To(HaveOccurred())
 		})
 
 		It("Should allow update if url is valid", func() {
 			By("simulating an invalid update scenario")
 			obj.Spec.Check.Query.URL = "http://sevice:456"
 			_, error := validator.ValidateUpdate(ctx, oldObj, obj)
-			Expect(error).To(BeNil())
+			Expect(error).ToNot(HaveOccurred())
 		})
 	})
 

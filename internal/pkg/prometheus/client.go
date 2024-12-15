@@ -114,7 +114,9 @@ func (p *PrometheusClient) RunQuery(query string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("request failed: %w", err)
 	}
-	defer r.Body.Close()
+	defer func() {
+		_ = r.Body.Close()
+	}()
 
 	b, err := io.ReadAll(r.Body)
 	if err != nil {

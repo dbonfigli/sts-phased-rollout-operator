@@ -84,15 +84,15 @@ type RollingPodStatus struct {
 	TotalFailedChecks int32 `json:"totalFailedChecks"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="target-ref",type="string",JSONPath=".spec.targetRef",description="target statefulset name"
-//+kubebuilder:printcolumn:name="phase",type="string",JSONPath=".status.phase"
-//+kubebuilder:printcolumn:name="partition",type="string",JSONPath=".status.rollingPodStatus.partition"
-//+kubebuilder:printcolumn:name="rolling-pod-status",type="string",JSONPath=".status.rollingPodStatus.status"
-//+kubebuilder:printcolumn:name="rollout-start-time",type="date",JSONPath=".status.rolloutStartTime"
-//+kubebuilder:printcolumn:name="rollout-end-time",type="date",JSONPath=".status.rolloutEndTime"
-//+kubebuilder:printcolumn:name="age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="target-ref",type="string",JSONPath=".spec.targetRef",description="target statefulset name"
+// +kubebuilder:printcolumn:name="phase",type="string",JSONPath=".status.phase"
+// +kubebuilder:printcolumn:name="partition",type="string",JSONPath=".status.rollingPodStatus.partition"
+// +kubebuilder:printcolumn:name="rolling-pod-status",type="string",JSONPath=".status.rollingPodStatus.status"
+// +kubebuilder:printcolumn:name="rollout-start-time",type="date",JSONPath=".status.rolloutStartTime"
+// +kubebuilder:printcolumn:name="rollout-end-time",type="date",JSONPath=".status.rolloutEndTime"
+// +kubebuilder:printcolumn:name="age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // PhasedRollout is the Schema for the PhasedRollouts API.
 type PhasedRollout struct {
@@ -103,7 +103,7 @@ type PhasedRollout struct {
 	Status PhasedRolloutStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // PhasedRolloutList contains a list of PhasedRollout.
 type PhasedRolloutList struct {
@@ -118,19 +118,19 @@ func init() {
 
 // Check is used to describe how the check should be done.
 type Check struct {
-	//+kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Minimum=0
 
 	// InitialDelaySeconds is the number of seconds to wait before performing checks after a rollout step, after all pods in the sts are available. This is useful to set in order to wait for prometheus metrics to settle down. Default is 60 seconds, minimum is 0.
 	// +optional
 	InitialDelaySeconds int32 `json:"initialDelaySeconds"`
 
-	//+kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Minimum=0
 
 	// PeriodSeconds defines how often to perform the checks. Default is 60 seconds, minimum is 0.
 	// +optional
 	PeriodSeconds int32 `json:"periodSeconds"`
 
-	//+kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Minimum=1
 
 	// SuccessThreshold is the number of consecutive successful checks that must be reached before letting the rollout proceed. Default is 3, minimum is 1.
 	// +optional
@@ -143,12 +143,12 @@ type Check struct {
 // PrometheusQuery describes how to perform the prometheus query.
 type PrometheusQuery struct {
 
-	//+kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MinLength=1
 
 	// Prometheus expression for the check. The semantic similar to a prometheus alert, if data is returned then the check is considered successful, if no data is returned the check is considered failed.
 	Expr string `json:"expr"`
 
-	//+kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MinLength=1
 
 	// URL of prometheus endpoint.
 	URL string `json:"url"`
@@ -164,7 +164,7 @@ type PrometheusQuery struct {
 }
 
 // GetCondition returns the status condition of defined type or creates one if it does not exist.
-// The returned condition is the actualy entry in the PhasedRollout, not a copy.
+// The returned condition is the actually entry in the PhasedRollout, not a copy.
 func (p *PhasedRollout) GetCondition(conditionType string) *metav1.Condition {
 	for i := range p.Status.Conditions {
 		if p.Status.Conditions[i].Type == conditionType {

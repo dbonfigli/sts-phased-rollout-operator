@@ -1,12 +1,23 @@
 name: Lint
 
 on:
+
   push:
+    branches:
+      - 'main'
+    paths:
+      - '**.go'
+
   pull_request:
+    branches:
+      - 'main'
+    paths:
+      - '**.go'
 
 jobs:
+
   lint:
-    name: Run on Ubuntu
+
     runs-on: ubuntu-latest
     steps:
       - name: Clone the code
