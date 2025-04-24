@@ -139,7 +139,7 @@ func (r *PhasedRolloutReconciler) addFinalizer(ctx context.Context, phasedRollou
 	log := log.FromContext(ctx)
 
 	// add finalizer if the phasedRollout has not been marked for deletion
-	if phasedRollout.ObjectMeta.DeletionTimestamp.IsZero() && !controllerutil.ContainsFinalizer(phasedRollout, finalizerAnnotation) {
+	if phasedRollout.DeletionTimestamp.IsZero() && !controllerutil.ContainsFinalizer(phasedRollout, finalizerAnnotation) {
 		log.V(10).Info("adding finalizer")
 		controllerutil.AddFinalizer(phasedRollout, finalizerAnnotation)
 		return &ctrl.Result{}, r.Update(ctx, phasedRollout)
@@ -163,7 +163,7 @@ func (r *PhasedRolloutReconciler) getTargetSTS(ctx context.Context, phasedRollou
 	if err := r.Get(ctx, stsNamespacedName, sts); err != nil {
 		if apierrs.IsNotFound(err) {
 			// if the phasedRollout has been marked for deletion and has a finalizer, remove it: it is ready to be deleted
-			if !phasedRollout.ObjectMeta.DeletionTimestamp.IsZero() && controllerutil.ContainsFinalizer(phasedRollout, finalizerAnnotation) {
+			if !phasedRollout.DeletionTimestamp.IsZero() && controllerutil.ContainsFinalizer(phasedRollout, finalizerAnnotation) {
 				log.V(10).Info("removing finalizer, sts is not found", "stsName", phasedRollout.Spec.TargetRef)
 				controllerutil.RemoveFinalizer(phasedRollout, finalizerAnnotation)
 				return nil, &ctrl.Result{}, r.Update(ctx, phasedRollout)
@@ -189,7 +189,7 @@ func (r *PhasedRolloutReconciler) getTargetSTS(ctx context.Context, phasedRollou
 func (r *PhasedRolloutReconciler) cleanupBeforeDeleteingPhasedRollout(ctx context.Context, sts *appsv1.StatefulSet, phasedRollout *stsplusv1alpha1.PhasedRollout) (*reconcile.Result, error) {
 	log := log.FromContext(ctx)
 
-	if !phasedRollout.ObjectMeta.DeletionTimestamp.IsZero() && controllerutil.ContainsFinalizer(phasedRollout, finalizerAnnotation) {
+	if !phasedRollout.DeletionTimestamp.IsZero() && controllerutil.ContainsFinalizer(phasedRollout, finalizerAnnotation) {
 		if sts.Annotations[managedByAnnotation] == phasedRollout.Name {
 			log.V(10).Info("cleaning up the sts before removing the phasedRollout", "stsName", sts.Name)
 			delete(sts.Annotations, managedByAnnotation)
