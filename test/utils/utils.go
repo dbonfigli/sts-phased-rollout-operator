@@ -24,15 +24,15 @@ import (
 	"os/exec"
 	"strings"
 
-	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
+	. "github.com/onsi/ginkgo/v2" //nolint:staticcheck
 )
 
 const (
-	prometheusOperatorVersion = "v0.77.1"
+	prometheusOperatorVersion = "v0.82.0"
 	prometheusOperatorURL     = "https://github.com/prometheus-operator/prometheus-operator/" +
 		"releases/download/%s/bundle.yaml"
 
-	certmanagerVersion = "v1.16.0"
+	certmanagerVersion = "v1.17.1"
 	certmanagerURLTmpl = "https://github.com/jetstack/cert-manager/releases/download/%s/cert-manager.yaml"
 )
 
@@ -197,15 +197,14 @@ func GetProjectDir() (string, error) {
 	if err != nil {
 		return wd, err
 	}
-	wd = strings.Replace(wd, "/test/e2e", "", -1)
+	wd = strings.ReplaceAll(wd, "/test/e2e", "")
 	return wd, nil
 }
 
 // UncommentCode searches for target in the file and remove the comment prefix
 // of the target content. The target content may span multiple lines.
 func UncommentCode(filename, target, prefix string) error {
-	// false positive
-	// nolint:gosec
+
 	content, err := os.ReadFile(filename)
 	if err != nil {
 		return err
@@ -245,7 +244,6 @@ func UncommentCode(filename, target, prefix string) error {
 	if err != nil {
 		return err
 	}
-	// false positive
-	// nolint:gosec
+
 	return os.WriteFile(filename, out.Bytes(), 0644)
 }
