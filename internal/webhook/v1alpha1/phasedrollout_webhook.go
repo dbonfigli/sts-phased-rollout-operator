@@ -18,18 +18,15 @@ package v1alpha1
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 
 	stsplusv1alpha1 "github.com/dbonfigli/sts-phased-rollout-operator/api/v1alpha1"
 	"github.com/prometheus/prometheus/promql/parser"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -38,7 +35,7 @@ var phasedrolloutlog = logf.Log.WithName("phasedrollout-resource")
 
 // SetupPhasedRolloutWebhookWithManager registers the webhook for PhasedRollout in the manager.
 func SetupPhasedRolloutWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).For(&stsplusv1alpha1.PhasedRollout{}).
+	return ctrl.NewWebhookManagedBy[*stsplusv1alpha1.PhasedRollout](mgr, &stsplusv1alpha1.PhasedRollout{}).
 		WithValidator(&PhasedRolloutCustomValidator{}).
 		WithDefaulter(&PhasedRolloutCustomDefaulter{}).
 		Complete()
@@ -50,15 +47,10 @@ func SetupPhasedRolloutWebhookWithManager(mgr ctrl.Manager) error {
 // as it is used only for temporary operations and does not need to be deeply copied.
 type PhasedRolloutCustomDefaulter struct{}
 
-var _ webhook.CustomDefaulter = &PhasedRolloutCustomDefaulter{}
+var _ admission.Defaulter[*stsplusv1alpha1.PhasedRollout] = &PhasedRolloutCustomDefaulter{}
 
-// Default implements webhook.CustomDefaulter so a webhook will be registered for the Kind PhasedRollout.
-func (d *PhasedRolloutCustomDefaulter) Default(ctx context.Context, obj runtime.Object) error {
-	phasedrollout, ok := obj.(*stsplusv1alpha1.PhasedRollout)
-
-	if !ok {
-		return fmt.Errorf("expected an PhasedRollout object but got %T", obj)
-	}
+// Default implements admission.Defaulter so a webhook will be registered for the Kind PhasedRollout.
+func (d *PhasedRolloutCustomDefaulter) Default(ctx context.Context, phasedrollout *stsplusv1alpha1.PhasedRollout) error {
 	phasedrolloutlog.Info("Defaulting for PhasedRollout", "name", phasedrollout.GetName())
 
 	if phasedrollout.Spec.Check.InitialDelaySeconds == 0 {
@@ -86,25 +78,17 @@ func (d *PhasedRolloutCustomDefaulter) Default(ctx context.Context, obj runtime.
 // as this struct is used only for temporary operations and does not need to be deeply copied.
 type PhasedRolloutCustomValidator struct{}
 
-var _ webhook.CustomValidator = &PhasedRolloutCustomValidator{}
+var _ admission.Validator[*stsplusv1alpha1.PhasedRollout] = &PhasedRolloutCustomValidator{}
 
-// ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type PhasedRollout.
-func (v *PhasedRolloutCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	phasedrollout, ok := obj.(*stsplusv1alpha1.PhasedRollout)
-	if !ok {
-		return nil, fmt.Errorf("expected a PhasedRollout object but got %T", obj)
-	}
+// ValidateCreate implements admission.Validator so a webhook will be registered for the type PhasedRollout.
+func (p *PhasedRolloutCustomValidator) ValidateCreate(ctx context.Context, phasedrollout *stsplusv1alpha1.PhasedRollout) (warnings admission.Warnings, err error) {
 	phasedrolloutlog.Info("Validation for PhasedRollout upon creation", "name", phasedrollout.GetName())
 
 	return nil, validatePhasedRollout(phasedrollout)
 }
 
-// ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type PhasedRollout.
-func (v *PhasedRolloutCustomValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	phasedrollout, ok := newObj.(*stsplusv1alpha1.PhasedRollout)
-	if !ok {
-		return nil, fmt.Errorf("expected a PhasedRollout object for the newObj but got %T", newObj)
-	}
+// ValidateUpdate implements admission.Validator so a webhook will be registered for the type PhasedRollout.
+func (p *PhasedRolloutCustomValidator) ValidateUpdate(ctx context.Context, oldPhasedrollout *stsplusv1alpha1.PhasedRollout, phasedrollout *stsplusv1alpha1.PhasedRollout) (warnings admission.Warnings, err error) {
 	phasedrolloutlog.Info("Validation for PhasedRollout upon update", "name", phasedrollout.GetName())
 
 	// TODO(user): fill in your validation logic upon object update.
@@ -112,12 +96,8 @@ func (v *PhasedRolloutCustomValidator) ValidateUpdate(ctx context.Context, oldOb
 	return nil, validatePhasedRollout(phasedrollout)
 }
 
-// ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type PhasedRollout.
-func (v *PhasedRolloutCustomValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	phasedrollout, ok := obj.(*stsplusv1alpha1.PhasedRollout)
-	if !ok {
-		return nil, fmt.Errorf("expected a PhasedRollout object but got %T", obj)
-	}
+// ValidateDelete implements admission.Validator so a webhook will be registered for the type PhasedRollout.
+func (p *PhasedRolloutCustomValidator) ValidateDelete(ctx context.Context, phasedrollout *stsplusv1alpha1.PhasedRollout) (warnings admission.Warnings, err error) {
 	phasedrolloutlog.Info("Validation for PhasedRollout upon deletion", "name", phasedrollout.GetName())
 
 	return nil, nil

@@ -146,7 +146,7 @@ func main() {
 	if err = (&controller.PhasedRolloutReconciler{
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
-		Recorder:         mgr.GetEventRecorderFor("sts-phased-rollout-controller"),
+		Recorder:         mgr.GetEventRecorder("sts-phased-rollout-controller"),
 		RetryWaitSeconds: 30,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PhasedRollout")
