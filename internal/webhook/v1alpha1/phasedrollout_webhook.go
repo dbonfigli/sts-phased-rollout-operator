@@ -121,7 +121,7 @@ func validatePhasedRollout(r *stsplusv1alpha1.PhasedRollout) error {
 
 func validatePromQLExpr(r *stsplusv1alpha1.PhasedRollout) *field.Error {
 	expr := r.Spec.Check.Query.Expr
-	_, err := parser.ParseExpr(expr)
+	_, err := parser.NewParser(parser.Options{}).ParseExpr(expr)
 	if err != nil {
 		return field.Invalid(field.NewPath("spec").Child("check").Child("query").Child("expr"), expr, "error parsing promQL expr: "+err.Error())
 	}
