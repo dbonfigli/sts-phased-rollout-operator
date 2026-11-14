@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 const (
@@ -113,7 +114,10 @@ type PhasedRolloutList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&PhasedRollout{}, &PhasedRolloutList{})
+	SchemeBuilder.Register(func(s *runtime.Scheme) error {
+		s.AddKnownTypes(SchemeGroupVersion, &PhasedRollout{}, &PhasedRolloutList{})
+		return nil
+	})
 }
 
 // Check is used to describe how the check should be done.
